@@ -1,5 +1,7 @@
 # alpaca
 Working Prototype of a Stock Trading App using Alpaca Markets API
+https://alpaca.markets/
+Visit Alpaca to begin trading via API. 
 
 # user authentication
   Goal : allow specific user to interact with market

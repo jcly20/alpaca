@@ -1,0 +1,23 @@
+# created by virtualenv automatically
+*
+
+
+# Ignore virtual environment
+venv/
+env/
+*.pyc
+__pycache__/
+
+# Ignore environment variables
+.env
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
+
+# Ignore IDE/editor settings
+.vscode/
+.idea/
+
+# Other temp files
+*.log

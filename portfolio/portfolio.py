@@ -1,6 +1,9 @@
 
 
-def showAccountInfo(client):
+from account.authentication import client, historicalClient
+
+
+def showAccountInfo():
     account = dict(client.get_account())
 
     print("\ncash available : $", account['cash'])

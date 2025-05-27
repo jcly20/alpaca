@@ -1,9 +1,12 @@
 
+
+from account.authentication import client, historicalClient
+
 from alpaca.common import APIError
 from alpaca.trading.requests import CreateWatchlistRequest, UpdateWatchlistRequest
 
 
-def getAllWatchlists(client) :
+def getAllWatchlists() :
     allWatchlists = []
     watchlists = client.get_watchlists()
 
@@ -18,7 +21,7 @@ def getAllWatchlists(client) :
     return allWatchlists
 
 
-def showAllWatchlists(client) :
+def showAllWatchlists() :
     watchlists = client.get_watchlists()
     ids = {}
     symbols = {}
@@ -33,7 +36,7 @@ def showAllWatchlists(client) :
         print("\n", watchlist.name, "  ", watchlist.id, "\n\t", symbolList)
 
 
-def createWatchlist(client, name, symbols) :
+def createWatchlist(name, symbols) :
     watchlistData = CreateWatchlistRequest(
         name=name,
         symbols=symbols
@@ -52,7 +55,7 @@ def createWatchlist(client, name, symbols) :
         return "error"
 
 
-def getWatchlistID(client, name):
+def getWatchlistID(name):
     watchlists = client.get_watchlists()
     ids = {}
 
@@ -63,8 +66,8 @@ def getWatchlistID(client, name):
     return ids[name]
 
 
-def getWatchlistSymbols(client, name):
-    id = getWatchlistID(client, name)
+def getWatchlistSymbols(name):
+    id = getWatchlistID(name)
     watchlist = client.get_watchlist_by_id(id)
     symbols = []
 
@@ -74,16 +77,16 @@ def getWatchlistSymbols(client, name):
     return symbols
 
 
-def showWatchlist(client, name) :
-    id = getWatchlistID(client, name)
-    symbols = getWatchlistSymbols(client, name)
+def showWatchlist(name) :
+    id = getWatchlistID(name)
+    symbols = getWatchlistSymbols(name)
 
     print("\n", name, "  ", id, "\n\t", symbols)
 
 
-def addToWatchlist(client, name, newName, symbols):
-    id = getWatchlistID(client, name)
-    oldSymbols = getWatchlistSymbols(client, name)
+def addToWatchlist(name, newName, symbols):
+    id = getWatchlistID(name)
+    oldSymbols = getWatchlistSymbols(name)
     oldSymbols.extend(symbols)
 
     watchlistData = UpdateWatchlistRequest(
@@ -104,8 +107,8 @@ def addToWatchlist(client, name, newName, symbols):
         return "error"
 
 
-def deleteFromWatchlist(client, name, symbol):
-    id = getWatchlistID(client, name)
+def deleteFromWatchlist(name, symbol):
+    id = getWatchlistID(name)
 
     try:
         client.remove_asset_from_watchlist_by_id(id, symbol)
@@ -120,8 +123,8 @@ def deleteFromWatchlist(client, name, symbol):
         return "error"
 
 
-def deleteWatchlist(client, name, sure):
-    id = getWatchlistID(client, name)
+def deleteWatchlist(name, sure):
+    id = getWatchlistID(name)
 
     if sure == 'yes':
         try:

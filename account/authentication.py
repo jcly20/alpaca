@@ -1,10 +1,10 @@
 
 import os
-import alpaca
+import sys
+from dotenv import load_dotenv
 
 from alpaca.trading.client import TradingClient
-
-from dotenv import load_dotenv
+from alpaca.data.historical.stock import StockHistoricalDataClient
 
 
 def load_credentials():
@@ -38,3 +38,28 @@ def load_client(email, api_key, secret_key):
     print(f"\nlogin successful!\naccount status : {status}\ncash available : ${cash}\n\nhappy trading!\n\n")
 
     return client
+
+
+def load_historicalClient(api_key, secret_key):
+
+    historicalClient = StockHistoricalDataClient(api_key, secret_key)
+
+    return historicalClient
+
+
+#load credentials
+email, password, paperAcc, liveAcc, paperAccUUID, accUUID, api_key, secret_key = load_credentials()
+
+#create client
+try:
+    client = load_client(email, api_key, secret_key)
+except Exception as error:
+    print("error creating client ...\nexiting program ...\ngoodbye!")
+    sys.exit(str(error))
+
+#create historical client
+try:
+    historicalClient = StockHistoricalDataClient(api_key, secret_key)
+except Exception as error:
+    print("error creating historicalClient ...\nexiting program ...\ngoodbye!")
+    sys.exit(str(error))

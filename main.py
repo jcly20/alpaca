@@ -17,8 +17,6 @@ except Exception as error:
     print("error creating client ...\nexiting program ...\ngoodbye!")
     sys.exit(error)
 
-
-
 #get all watchlists
 allWatchlists = watchlists.getAllWatchlists(client)
 print(allWatchlists)

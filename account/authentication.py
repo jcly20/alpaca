@@ -42,7 +42,11 @@ def load_client(email, api_key, secret_key):
 
 def load_historicalClient(api_key, secret_key):
 
+    print(f"logging in as {email} (Historical Client)...")
+
     historicalClient = StockHistoricalDataClient(api_key, secret_key)
+
+    print(f"\nHistorical Client Login Successful!\n\n")
 
     return historicalClient
 
@@ -59,7 +63,7 @@ except Exception as error:
 
 #create historical client
 try:
-    historicalClient = StockHistoricalDataClient(api_key, secret_key)
+    historicalClient = load_historicalClient(api_key, secret_key)
 except Exception as error:
     print("error creating historicalClient ...\nexiting program ...\ngoodbye!")
     sys.exit(str(error))

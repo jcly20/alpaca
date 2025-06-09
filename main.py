@@ -9,8 +9,8 @@ import portfolio.portfolio as portfolio
 import algorithm.algorithm1.algorithm1 as alg1
 
 #get all watchlists
-allWatchlists = watchlists.getAllWatchlists()
-print(allWatchlists)
+# allWatchlists = watchlists.getAllWatchlists()
+# print(allWatchlists)
 
 alg1.trader("alg1Watchlist")
 

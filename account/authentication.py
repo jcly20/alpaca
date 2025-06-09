@@ -31,39 +31,23 @@ def load_client(email, api_key, secret_key):
     print(f"logging in as {email} ...")
 
     client = TradingClient(api_key, secret_key, paper=True)
+    historicalClient = StockHistoricalDataClient(api_key, secret_key)
     account = dict(client.get_account())
     cash = account["cash"]
     status = account["status"]
 
     print(f"\nlogin successful!\naccount status : {status}\ncash available : ${cash}\n\nhappy trading!\n\n")
 
-    return client
-
-
-def load_historicalClient(api_key, secret_key):
-
-    print(f"logging in as {email} (Historical Client)...")
-
-    historicalClient = StockHistoricalDataClient(api_key, secret_key)
-
-    print(f"\nHistorical Client Login Successful!\n\n")
-
-    return historicalClient
+    return client, historicalClient
 
 
 #load credentials
 email, password, paperAcc, liveAcc, paperAccUUID, accUUID, api_key, secret_key = load_credentials()
 
-#create client
+#create client and historical client
 try:
-    client = load_client(email, api_key, secret_key)
+    client, historicalClient = load_client(email, api_key, secret_key)
 except Exception as error:
     print("error creating client ...\nexiting program ...\ngoodbye!")
     sys.exit(str(error))
 
-#create historical client
-try:
-    historicalClient = load_historicalClient(api_key, secret_key)
-except Exception as error:
-    print("error creating historicalClient ...\nexiting program ...\ngoodbye!")
-    sys.exit(str(error))

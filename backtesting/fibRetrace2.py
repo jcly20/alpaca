@@ -23,49 +23,64 @@ def load_historical_data(symbol, start, end, timeframe=TimeFrame.Minute):
     )
     return historicalClient.get_stock_bars(request)[symbol]
 
-# Calculate EMA
-def calculate_ema(data, period):
-    ema = []
-    k = 2 / (period + 1)
-    for i in range(len(data)):
-        close = data[i].close
-        if i < period - 1:
-            ema.append(None)
-        elif i == period - 1:
-            sma = sum([data[j].close for j in range(i - period + 1, i + 1)]) / period
-            ema.append(sma)
-        else:
-            ema.append(close * k + ema[-1] * (1 - k))
-    return ema
+# Calculate Fibonacci retracement levels
+def calculate_fibonacci_levels(swing_high, swing_low):
+    diff = swing_high - swing_low
+    return {
+        '0.0': swing_high,
+        '38.2': swing_high - 0.382 * diff,
+        '50.0': swing_high - 0.5 * diff,
+        '61.8': swing_high - 0.618 * diff
+    }
 
-# Simulate entry logic
-def simulate_trade(bar, symbol, time, portfolio, portfolio_value):
+# Identify swing highs and lows
+def find_recent_swing(data, lookback=20):
+    highs = [bar.high for bar in data[-lookback:]]
+    lows = [bar.low for bar in data[-lookback:]]
+    return max(highs), min(lows)
+
+# Simulate entry based on Fib retracement
+
+def simulate_trade_fib(bar, symbol, time, portfolio, portfolio_value, fib_levels, prev_bar, swing_low):
     price = bar.close
+    buffer = 0.25  # Loosen condition slightly
+
     if symbol not in portfolio or portfolio[symbol]["status"] != "open":
-        risk_amount = portfolio_value * 0.01
-        quantity = round(risk_amount / price, 2)
-        portfolio[symbol] = {
-            "entry": price,
-            "sl": round(price * 0.99, 2),
-            "status": "open",
-            "time": time,
-            "entry_signal": "3-bar momentum",
-            "trail_price": price,
-            "quantity": quantity
-        }
+        in_zone = fib_levels['50.0'] - buffer <= price <= fib_levels['61.8'] + buffer
+        bounce = bar.close > bar.open and bar.close > prev_bar.close
+
+        if in_zone and bounce:
+            risk_amount = portfolio_value * 0.01
+            quantity = round(risk_amount / price, 2)
+            portfolio[symbol] = {
+                "entry": price,
+                "sl": round(swing_low, 2),
+                "target": round(fib_levels['0.0'], 2),
+                "status": "open",
+                "time": time,
+                "entry_signal": "Fibonacci Retracement",
+                "trail_price": price,
+                "quantity": quantity
+            }
+
     return portfolio_value
 
-# Check for trailing stop loss
+# Check for target and trailing stop loss
 def check_exit(bar, symbol, time, portfolio, trade_log, portfolio_value):
     if symbol in portfolio and portfolio[symbol]["status"] == "open":
         entry = portfolio[symbol]["entry"]
         trail_price = portfolio[symbol]["trail_price"]
+        sl = portfolio[symbol]["sl"]
+        target = portfolio[symbol]["target"]
         quantity = portfolio[symbol]["quantity"]
 
+        # Trail SL upward
         if bar.close > trail_price:
             portfolio[symbol]["trail_price"] = bar.close
+            portfolio[symbol]["sl"] = round(bar.close * 0.99, 2)
 
-        if bar.close <= portfolio[symbol]["trail_price"] * 0.99:
+        # Take profit at 0% level (sell full position)
+        if bar.close >= target:
             exit_price = round(bar.close, 2)
             pnl = round((exit_price - entry) * quantity, 2)
             portfolio_value += pnl
@@ -74,8 +89,28 @@ def check_exit(bar, symbol, time, portfolio, trade_log, portfolio_value):
                 portfolio[symbol]["time"].astimezone(mountain),
                 portfolio[symbol]["entry_signal"],
                 entry,
-                None,
-                None,
+                portfolio[symbol]["sl"],
+                target,
+                exit_price,
+                "Target Hit",
+                pnl,
+                time.astimezone(mountain)
+            ])
+            portfolio[symbol]["status"] = "closed"
+            return portfolio_value
+
+        # Stop out if SL is hit
+        if bar.close <= portfolio[symbol]["sl"]:
+            exit_price = round(bar.close, 2)
+            pnl = round((exit_price - entry) * quantity, 2)
+            portfolio_value += pnl
+            trade_log.append([
+                symbol,
+                portfolio[symbol]["time"].astimezone(mountain),
+                portfolio[symbol]["entry_signal"],
+                entry,
+                portfolio[symbol]["sl"],
+                target,
                 exit_price,
                 "Trailing SL",
                 pnl,
@@ -84,31 +119,24 @@ def check_exit(bar, symbol, time, portfolio, trade_log, portfolio_value):
             portfolio[symbol]["status"] = "closed"
     return portfolio_value
 
-# Signal logic based on 3-bar momentum and positive 9 EMA and above 50 EMA, during market hours
-def signalScan(data, symbol, timestamps, ema_9, ema_50, portfolio, trade_log, portfolio_value):
-    if len(data) < 51:
+# Signal scan for Fib retracement setup
+def signalScan_fib(data, symbol, timestamps, portfolio, trade_log, portfolio_value):
+    if len(data) < 61:
         return portfolio_value
 
     c = len(data) - 1
-    b0, b1, b2 = data[c], data[c-1], data[c-2]
+    bar = data[c]
+    prev_bar = data[c-1]
     bar_time = timestamps[c].astimezone(mountain)
 
-    if not (bar_time.hour >= 7 and bar_time.hour < 14):
+    if not (7 <= bar_time.hour < 14):
         return portfolio_value
 
-    if (
-        ema_9[c] is not None and
-        ema_50[c] is not None and
-        ema_9[c] > 0 and
-        b0.close > ema_50[c] and
-        b2.close < b1.close < b0.close and
-        b2.close > b2.open and
-        b1.close > b1.open and
-        b0.close > b0.open
-    ):
-        portfolio_value = simulate_trade(b0, symbol, timestamps[c], portfolio, portfolio_value)
+    swing_high, swing_low = find_recent_swing(data[:c])
+    fib_levels = calculate_fibonacci_levels(swing_high, swing_low)
 
-    portfolio_value = check_exit(b0, symbol, timestamps[c], portfolio, trade_log, portfolio_value)
+    portfolio_value = simulate_trade_fib(bar, symbol, timestamps[c], portfolio, portfolio_value, fib_levels, prev_bar, swing_low)
+    portfolio_value = check_exit(bar, symbol, timestamps[c], portfolio, trade_log, portfolio_value)
 
     return portfolio_value
 
@@ -125,16 +153,13 @@ def run_backtest(symbol, start, end):
         simulated_data.append(candle.Candle(bar.open, bar.high, bar.low, bar.close, bar.close))
         timestamps.append(bar.timestamp)
 
-    ema_9 = calculate_ema(simulated_data, 9)
-    ema_50 = calculate_ema(simulated_data, 50)
-
-    for i in range(50, len(simulated_data)):
-        portfolio_value = signalScan(simulated_data[:i+1], symbol, timestamps[:i+1], ema_9[:i+1], ema_50[:i+1], portfolio, trade_log, portfolio_value)
+    for i in range(61, len(simulated_data)):
+        portfolio_value = signalScan_fib(simulated_data[:i+1], symbol, timestamps[:i+1], portfolio, trade_log, portfolio_value)
 
     return trade_log
 
 # Export results and calculate metrics
-def export_results(all_trade_logs):
+def export_results(all_trade_logs, custom_filename=None):
     flat_log = [entry for log in all_trade_logs for entry in log]
     total_pnl = sum([row[8] for row in flat_log])
     wins = sum(1 for row in flat_log if row[8] > 0)
@@ -143,7 +168,10 @@ def export_results(all_trade_logs):
     growth_pct = round((growth / initial_cash) * 100, 2)
 
     timestamp_str = datetime.now().astimezone(mountain).strftime("%Y-%m-%d_%H-%M-%S")
-    filename = f"backtest_results_parallel_{timestamp_str}.csv"
+    if custom_filename:
+        filename = f"{custom_filename}_{timestamp_str}.csv"
+    else:
+        filename = f"backtest_fibonacci_{timestamp_str}.csv"
 
     with open(filename, "w", newline="") as f:
         writer = csv.writer(f)
@@ -162,21 +190,12 @@ def export_results(all_trade_logs):
 
 # Main parallel backtest
 if __name__ == "__main__":
-    symbols = ["AMD",      # Tech
-        "JNJ",      # Healthcare
-        "KO",       # Consumer Staples
-        "XOM",      # Energy
-        "WMT",      # Retail
-        "TSLA",     # Auto/Tech
-        "JPM",      # Financial
-        "MCD",      # Restaurants
-        "BA",       # Aerospace
-        "CVX"       # Energy
-    ]
-    start = datetime(2025, 5, 1)
+    symbols = ["AMD", "JNJ", "KO", "XOM", "WMT", "TSLA", "JPM", "MCD", "BA", "CVX"]
+    start = datetime(2025, 1, 1)
     end = datetime(2025, 6, 1)
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
         results = list(executor.map(lambda sym: run_backtest(sym, start, end), symbols))
 
-    export_results(results)
+        filename = input("Enter a name for the results file (without extension): ").strip()
+    export_results(results, custom_filename=filename)

@@ -10,7 +10,10 @@ from account.authentication import historicalClient
 import algorithm.tradingObjects.candle as candle
 import csv
 import pytz
-import concurrent.futures
+import threading
+
+# Global lock for thread-safe capital updates
+capital_lock = threading.Lock()
 
 # Timezone setup
 #mountain = pytz.timezone("America/Denver")
@@ -21,9 +24,7 @@ def get_sp500_symbols():
     soup = BeautifulSoup(resp.text, "html.parser")
     table = soup.find("table", {"id": "constituents"})
     symbols = [row.find_all("td")[0].text.strip().replace(".", "-") for row in table.find_all("tr")[1:]]
-    #get first 100 symbols
-    symbols = symbols[:100]
-
+    #symbols = symbols[:100]  # Limit to first 100 symbols
     return symbols
 
 def fetch_data(symbol, start, end):
@@ -108,35 +109,40 @@ def simulate_trade(df, signal_index, capital):
         "BarsHeld": bars_held
     }, pnl
 
-def process(symbol, start, end, capital):
+def process(symbol, start, end, capital_ref):
     try:
         df = fetch_data(symbol, start, end)
         df = add_indicators(df)
         signals = find_signals(df)
         trades = []
+
         for signal_index in signals:
-            trade, pnl = simulate_trade(df, signal_index, capital)
+            with capital_lock:
+                current_capital = capital_ref[0]
+            trade, pnl = simulate_trade(df, signal_index, current_capital)
             trade["Symbol"] = symbol
-            if not trade["Outcome"] == "Expired":
+            if trade["Outcome"] != "Expired":
                 trades.append(trade)
-                capital += pnl
-        return trades, capital
+                with capital_lock:
+                    capital_ref[0] += pnl
+
+        return trades
     except Exception as e:
         print(f"Error with {symbol}: {e}")
-        return [], capital
+        return []
 
 def run(start, end):
     symbols = get_sp500_symbols()
     all_trades = []
-    capital = 100000
+    capital_ref = [100000]
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-        futures = [executor.submit(process, symbol, start, end, capital) for symbol in symbols]
+        futures = [executor.submit(process, symbol, start, end, capital_ref) for symbol in symbols]
         for future in concurrent.futures.as_completed(futures):
-            trades, capital = future.result()
+            trades = future.result()
             all_trades.extend(trades)
 
-    return all_trades, capital
+    return all_trades, capital_ref[0]
 
 def save_to_csv(trades, final_capital, filename):
     if not trades:

@@ -26,14 +26,10 @@ def get_sp500_symbols():
         cols = row.find_all("td")
         symbol = cols[0].text.strip().replace(".", "-")
         name = cols[1].text.strip()
-        # This line gets a static market cap string from Wikipedia. If you want accurate market cap data,
-        # consider retrieving it dynamically using Alpaca's fundamental data (if available),
-        # or calculate it using shares outstanding × last close price.
         market_cap = cols[3].text.strip()
         symbols.append(symbol)
         info_map[symbol] = {"CompanyName": name, "MarketCap": market_cap}
     return symbols, info_map
-
 
 def fetch_data(symbol, start, end):
     req = StockBarsRequest(symbol_or_symbols=symbol, timeframe=TimeFrame.Day, start=start, end=end)
@@ -118,8 +114,7 @@ def simulate_trade(df, signal_index, capital):
         "BarsHeld": bars_held
     }, pnl
 
-# Updated process to also return average volume for the symbol
-def process(symbol, start, end, capital_ref):
+def process(symbol, start, end, capital_ref, portfolio_values, drawdowns, peak_value_ref):
     try:
         df = fetch_data(symbol, start, end)
         avg_volume = df["volume"].mean() if not df.empty else 0
@@ -136,6 +131,10 @@ def process(symbol, start, end, capital_ref):
                 trades.append(trade)
                 with capital_lock:
                     capital_ref[0] += pnl
+                    portfolio_values.append(capital_ref[0])
+                    peak_value_ref[0] = max(peak_value_ref[0], capital_ref[0])
+                    dd = (peak_value_ref[0] - capital_ref[0]) / peak_value_ref[0] if peak_value_ref[0] != 0 else 0
+                    drawdowns.append(dd)
 
         return trades, avg_volume
     except Exception as e:
@@ -147,18 +146,24 @@ def run(start, end):
     all_trades = []
     capital_ref = [100000]
     avg_volumes = {}
+    portfolio_values = []
+    drawdowns = []
+    peak_value_ref = [capital_ref[0]]
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-        futures = {executor.submit(process, symbol, start, end, capital_ref): symbol for symbol in symbols}
+        futures = {
+            executor.submit(process, symbol, start, end, capital_ref, portfolio_values, drawdowns, peak_value_ref): symbol
+            for symbol in symbols
+        }
         for future in concurrent.futures.as_completed(futures):
             symbol = futures[future]
             trades, avg_volume = future.result()
             all_trades.extend(trades)
             avg_volumes[symbol] = avg_volume
 
-    return all_trades, capital_ref[0], info_map, avg_volumes
+    return all_trades, capital_ref[0], info_map, avg_volumes, drawdowns
 
-def save_to_csv(trades, final_capital, info_map, avg_volumes, filename):
+def save_to_csv(trades, final_capital, info_map, avg_volumes, drawdowns, filename):
     if not trades:
         print("No trades to save.")
         return
@@ -176,6 +181,7 @@ def save_to_csv(trades, final_capital, info_map, avg_volumes, filename):
         avg_pnl = total_pnl / num_trades if num_trades > 0 else 0
         avg_bars_held = sum(t["BarsHeld"] for t in trades) / num_trades if num_trades > 0 else 0
         pct_change = ((final_capital - 100000) / 100000) * 100
+        max_drawdown = max(drawdowns) * 100 if drawdowns else 0
 
         f.write("\n")
         f.write("Summary:\n")
@@ -186,6 +192,7 @@ def save_to_csv(trades, final_capital, info_map, avg_volumes, filename):
         f.write(f"Average Bars Held: {round(avg_bars_held, 2)}\n")
         f.write(f"Final Portfolio Value: {round(final_capital, 2)}\n")
         f.write(f"% Change: {round(pct_change, 2)}%\n")
+        f.write(f"Max Drawdown: {round(max_drawdown, 2)}%\n")
 
         f.write("\nSymbol Statistics:\n")
         symbol_stats = {}
@@ -209,7 +216,7 @@ def save_to_csv(trades, final_capital, info_map, avg_volumes, filename):
         winner_avg_vol = sum(avg_volumes.get(s, 0) for s in winners) / len(winners) if winners else 0
         loser_avg_vol = sum(avg_volumes.get(s, 0) for s in losers) / len(losers) if losers else 0
 
-        f.write("Analysis:")
+        f.write("Analysis:\n")
 
         def parse_market_cap(cap_str):
             try:
@@ -228,9 +235,9 @@ def save_to_csv(trades, final_capital, info_map, avg_volumes, filename):
         f.write(f"Winners (>=33% win rate): {len(winners)} symbols\n")
         f.write(f"Losers (<33% win rate): {len(losers)} symbols\n")
         f.write(f"Average Volume (Winners): {round(winner_avg_vol):,}\n")
-        f.write(f"Average Volume (Losers): {round(loser_avg_vol):,}")
-        f.write(f"Average Market Cap (Winners): ${round(winner_avg_cap / 1e9, 2)}B")
-        f.write(f"Average Market Cap (Losers): ${round(loser_avg_cap / 1e9, 2)}B")
+        f.write(f"Average Volume (Losers): {round(loser_avg_vol):,}\n")
+        f.write(f"Average Market Cap (Winners): ${round(winner_avg_cap / 1e9, 2)}B\n")
+        f.write(f"Average Market Cap (Losers): ${round(loser_avg_cap / 1e9, 2)}B\n")
 
         print("Summary:")
         print(f"Total PnL: {round(total_pnl, 2)}")
@@ -240,12 +247,12 @@ def save_to_csv(trades, final_capital, info_map, avg_volumes, filename):
         print(f"Average Bars Held: {round(avg_bars_held, 2)}")
         print(f"Final Portfolio Value: {round(final_capital, 2)}")
         print(f"% Change: {round(pct_change, 2)}%")
+        print(f"Max Drawdown: {round(max_drawdown, 2)}%")
 
 if __name__ == "__main__":
-    start_date = datetime(2021, 1, 1)
+    start_date = datetime(2023, 1, 1)
     end_date = datetime(2025, 6, 30)
-    all_trades, final_capital, info_map, avg_volumes = run(start_date, end_date)
+    all_trades, final_capital, info_map, avg_volumes, drawdowns = run(start_date, end_date)
     filename = input("Enter a name for the results file (without extension): ").strip() + ".csv"
-    save_to_csv(all_trades, final_capital, info_map, avg_volumes, filename)
+    save_to_csv(all_trades, final_capital, info_map, avg_volumes, drawdowns, filename)
     print(f"Saved {len(all_trades)} trades to {filename}")
-

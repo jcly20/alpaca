@@ -15,24 +15,9 @@ import threading
 # Global lock for thread-safe capital updates
 capital_lock = threading.Lock()
 
+
 def get_sp500_symbols():
-    url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
-    resp = requests.get(url)
-    soup = BeautifulSoup(resp.text, "html.parser")
-    table = soup.find("table", {"id": "constituents"})
-    symbols = []
-    info_map = {}
-    for row in table.find_all("tr")[1:]:
-        cols = row.find_all("td")
-        symbol = cols[0].text.strip().replace(".", "-")
-        name = cols[1].text.strip()
-        # This line gets a static market cap string from Wikipedia. If you want accurate market cap data,
-        # consider retrieving it dynamically using Alpaca's fundamental data (if available),
-        # or calculate it using shares outstanding × last close price.
-        market_cap = cols[3].text.strip()
-        symbols.append(symbol)
-        info_map[symbol] = {"CompanyName": name, "MarketCap": market_cap}
-    return symbols, info_map
+    return ['AFL', 'MO', 'AMZN', 'AXP', 'AIG', 'AMP', 'AMGN', 'APH', 'APO', 'ACGL', 'ANET', 'AIZ', 'ATO', 'AVB', 'BKNG', 'BSX', 'BRO', 'CPT', 'CAH', 'CNP', 'CI', 'CTAS', 'CSCO', 'CFG', 'CME', 'KO', 'CTSH', 'ED', 'CEG', 'CTVA', 'COST', 'CMI', 'DRI', 'DVA', 'DELL', 'FANG', 'ETN', 'ELV', 'EQT', 'EQR', 'EG', 'FITB', 'FSLR', 'GRMN', 'GE', 'GD', 'HIG', 'HPE', 'HLT', 'HD', 'HWM', 'IBM', 'IR', 'PODD', 'ICE', 'IP', 'INTU', 'IRM', 'JCI', 'JPM', 'K', 'KEY', 'KIM', 'KMI', 'KKR', 'LHX', 'LII', 'LLY', 'LIN', 'LKQ', 'L', 'LULU', 'LYB', 'MTB', 'MAR', 'MCK', 'MET', 'MOH', 'TAP', 'MCO', 'MSI', 'NDAQ', 'NWSA', 'NWS', 'NI', 'NTRS', 'NOC', 'NRG', 'ORLY', 'OXY', 'OMC', 'OKE', 'PKG', 'PANW', 'PAYX', 'PCG', 'PNW', 'PFG', 'PG', 'PGR', 'PRU', 'PWR', 'DGX', 'RSG', 'ROL', 'SLB', 'STX', 'NOW', 'SPG', 'SBUX', 'TRGP', 'TDY', 'TPL', 'TXT', 'TKO', 'TT', 'TFC', 'TYL', 'UDR', 'URI', 'VRSK', 'VRTX', 'GWW', 'WAT', 'WEC', 'WELL', 'XEL', 'ZBRA']
 
 
 def fetch_data(symbol, start, end):
@@ -118,11 +103,9 @@ def simulate_trade(df, signal_index, capital):
         "BarsHeld": bars_held
     }, pnl
 
-# Updated process to also return average volume for the symbol
 def process(symbol, start, end, capital_ref):
     try:
         df = fetch_data(symbol, start, end)
-        avg_volume = df["volume"].mean() if not df.empty else 0
         df = add_indicators(df)
         signals = find_signals(df)
         trades = []
@@ -137,28 +120,25 @@ def process(symbol, start, end, capital_ref):
                 with capital_lock:
                     capital_ref[0] += pnl
 
-        return trades, avg_volume
+        return trades
     except Exception as e:
         print(f"Error with {symbol}: {e}")
-        return [], 0
+        return []
 
 def run(start, end):
-    symbols, info_map = get_sp500_symbols()
+    symbols = get_sp500_symbols()
     all_trades = []
     capital_ref = [100000]
-    avg_volumes = {}
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-        futures = {executor.submit(process, symbol, start, end, capital_ref): symbol for symbol in symbols}
+        futures = [executor.submit(process, symbol, start, end, capital_ref) for symbol in symbols]
         for future in concurrent.futures.as_completed(futures):
-            symbol = futures[future]
-            trades, avg_volume = future.result()
+            trades = future.result()
             all_trades.extend(trades)
-            avg_volumes[symbol] = avg_volume
 
-    return all_trades, capital_ref[0], info_map, avg_volumes
+    return all_trades, capital_ref[0]
 
-def save_to_csv(trades, final_capital, info_map, avg_volumes, filename):
+def save_to_csv(trades, final_capital, filename):
     if not trades:
         print("No trades to save.")
         return
@@ -206,9 +186,6 @@ def save_to_csv(trades, final_capital, info_map, avg_volumes, filename):
         winners = [s for s, stats in symbol_stats.items() if (stats["wins"] / stats["total"] * 100) >= 33]
         losers = [s for s in symbol_stats if s not in winners]
 
-        winner_avg_vol = sum(avg_volumes.get(s, 0) for s in winners) / len(winners) if winners else 0
-        loser_avg_vol = sum(avg_volumes.get(s, 0) for s in losers) / len(losers) if losers else 0
-
         f.write("Analysis:")
 
         def parse_market_cap(cap_str):
@@ -221,16 +198,8 @@ def save_to_csv(trades, final_capital, info_map, avg_volumes, filename):
             except:
                 return 0
 
-        winner_caps = [parse_market_cap(info_map.get(s, {}).get("MarketCap", "0")) for s in winners]
-        loser_caps = [parse_market_cap(info_map.get(s, {}).get("MarketCap", "0")) for s in losers]
-        winner_avg_cap = sum(winner_caps) / len(winner_caps) if winner_caps else 0
-        loser_avg_cap = sum(loser_caps) / len(loser_caps) if loser_caps else 0
         f.write(f"Winners (>=33% win rate): {len(winners)} symbols\n")
         f.write(f"Losers (<33% win rate): {len(losers)} symbols\n")
-        f.write(f"Average Volume (Winners): {round(winner_avg_vol):,}\n")
-        f.write(f"Average Volume (Losers): {round(loser_avg_vol):,}")
-        f.write(f"Average Market Cap (Winners): ${round(winner_avg_cap / 1e9, 2)}B")
-        f.write(f"Average Market Cap (Losers): ${round(loser_avg_cap / 1e9, 2)}B")
 
         print("Summary:")
         print(f"Total PnL: {round(total_pnl, 2)}")
@@ -242,10 +211,10 @@ def save_to_csv(trades, final_capital, info_map, avg_volumes, filename):
         print(f"% Change: {round(pct_change, 2)}%")
 
 if __name__ == "__main__":
-    start_date = datetime(2021, 1, 1)
+    start_date = datetime(2024, 11, 5)
     end_date = datetime(2025, 6, 30)
-    all_trades, final_capital, info_map, avg_volumes = run(start_date, end_date)
+    all_trades, final_capital = run(start_date, end_date)
     filename = input("Enter a name for the results file (without extension): ").strip() + ".csv"
-    save_to_csv(all_trades, final_capital, info_map, avg_volumes, filename)
+    save_to_csv(all_trades, final_capital, filename)
     print(f"Saved {len(all_trades)} trades to {filename}")
 

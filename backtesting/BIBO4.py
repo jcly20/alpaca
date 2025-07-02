@@ -15,25 +15,17 @@ import threading
 # Global lock for thread-safe capital updates
 capital_lock = threading.Lock()
 
+# Timezone setup
+#mountain = pytz.timezone("America/Denver")
+
 def get_sp500_symbols():
     url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
     resp = requests.get(url)
     soup = BeautifulSoup(resp.text, "html.parser")
     table = soup.find("table", {"id": "constituents"})
-    symbols = []
-    info_map = {}
-    for row in table.find_all("tr")[1:]:
-        cols = row.find_all("td")
-        symbol = cols[0].text.strip().replace(".", "-")
-        name = cols[1].text.strip()
-        # This line gets a static market cap string from Wikipedia. If you want accurate market cap data,
-        # consider retrieving it dynamically using Alpaca's fundamental data (if available),
-        # or calculate it using shares outstanding × last close price.
-        market_cap = cols[3].text.strip()
-        symbols.append(symbol)
-        info_map[symbol] = {"CompanyName": name, "MarketCap": market_cap}
-    return symbols, info_map
-
+    symbols = [row.find_all("td")[0].text.strip().replace(".", "-") for row in table.find_all("tr")[1:]]
+    #symbols = symbols[:100]  # Limit to first 100 symbols
+    return symbols
 
 def fetch_data(symbol, start, end):
     req = StockBarsRequest(symbol_or_symbols=symbol, timeframe=TimeFrame.Day, start=start, end=end)
@@ -68,7 +60,7 @@ def find_signals(df):
         yesterday = df.iloc[i - 1]
 
         cond1 = today["SMA50"] > today["SMA100"] > today["SMA150"]
-        cond2 = yesterday["low"] < yesterday["SMA50"] < yesterday["close"]
+        cond2 = yesterday["low"] < yesterday["SMA50"] < yesterday["open"] < yesterday["close"]
         cond3 = today["close"] > yesterday["close"]
         cond4 = today["close"] > today["open"]
 
@@ -82,8 +74,7 @@ def simulate_trade(df, signal_index, capital):
     stop_loss = entry_price - 0.5 * atr
     take_profit = entry_price + 1 * atr
     risk = 0.01 * capital
-    diff = entry_price - stop_loss
-    position_size = risk / diff if diff > 0 else 0
+    position_size = risk / (entry_price - stop_loss) if (entry_price - stop_loss) > 0 else 0
 
     outcome = "Expired"
     exit_price = df.iloc[-1]["close"]
@@ -118,11 +109,9 @@ def simulate_trade(df, signal_index, capital):
         "BarsHeld": bars_held
     }, pnl
 
-# Updated process to also return average volume for the symbol
 def process(symbol, start, end, capital_ref):
     try:
         df = fetch_data(symbol, start, end)
-        avg_volume = df["volume"].mean() if not df.empty else 0
         df = add_indicators(df)
         signals = find_signals(df)
         trades = []
@@ -137,34 +126,31 @@ def process(symbol, start, end, capital_ref):
                 with capital_lock:
                     capital_ref[0] += pnl
 
-        return trades, avg_volume
+        return trades
     except Exception as e:
         print(f"Error with {symbol}: {e}")
-        return [], 0
+        return []
 
 def run(start, end):
-    symbols, info_map = get_sp500_symbols()
+    symbols = get_sp500_symbols()
     all_trades = []
     capital_ref = [100000]
-    avg_volumes = {}
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-        futures = {executor.submit(process, symbol, start, end, capital_ref): symbol for symbol in symbols}
+        futures = [executor.submit(process, symbol, start, end, capital_ref) for symbol in symbols]
         for future in concurrent.futures.as_completed(futures):
-            symbol = futures[future]
-            trades, avg_volume = future.result()
+            trades = future.result()
             all_trades.extend(trades)
-            avg_volumes[symbol] = avg_volume
 
-    return all_trades, capital_ref[0], info_map, avg_volumes
+    return all_trades, capital_ref[0]
 
-def save_to_csv(trades, final_capital, info_map, avg_volumes, filename):
+def save_to_csv(trades, final_capital, filename):
     if not trades:
         print("No trades to save.")
         return
 
     keys = list(trades[0].keys())
-    with open(filename, "w", newline="", encoding="utf-8") as f:
+    with open(filename, "w", newline="") as f:
         writer = csv.DictWriter(f, keys)
         writer.writeheader()
         writer.writerows(trades)
@@ -187,51 +173,6 @@ def save_to_csv(trades, final_capital, info_map, avg_volumes, filename):
         f.write(f"Final Portfolio Value: {round(final_capital, 2)}\n")
         f.write(f"% Change: {round(pct_change, 2)}%\n")
 
-        f.write("\nSymbol Statistics:\n")
-        symbol_stats = {}
-        for t in trades:
-            symbol = t["Symbol"]
-            if symbol not in symbol_stats:
-                symbol_stats[symbol] = {"wins": 0, "total": 0}
-            symbol_stats[symbol]["total"] += 1
-            if t["PnL"] > 0:
-                symbol_stats[symbol]["wins"] += 1
-
-        f.write("Symbol,Total Trades,Win Rate (%)\n")
-        for symbol, stats in sorted(symbol_stats.items()):
-            total = stats["total"]
-            win_rate_symbol = (stats["wins"] / total) * 100 if total > 0 else 0
-            f.write(f"{symbol},{total},{round(win_rate_symbol, 2)}\n")
-
-        winners = [s for s, stats in symbol_stats.items() if (stats["wins"] / stats["total"] * 100) >= 33]
-        losers = [s for s in symbol_stats if s not in winners]
-
-        winner_avg_vol = sum(avg_volumes.get(s, 0) for s in winners) / len(winners) if winners else 0
-        loser_avg_vol = sum(avg_volumes.get(s, 0) for s in losers) / len(losers) if losers else 0
-
-        f.write("Analysis:")
-
-        def parse_market_cap(cap_str):
-            try:
-                if cap_str.endswith('B'):
-                    return float(cap_str[:-1]) * 1e9
-                elif cap_str.endswith('M'):
-                    return float(cap_str[:-1]) * 1e6
-                return float(cap_str.replace(',', ''))
-            except:
-                return 0
-
-        winner_caps = [parse_market_cap(info_map.get(s, {}).get("MarketCap", "0")) for s in winners]
-        loser_caps = [parse_market_cap(info_map.get(s, {}).get("MarketCap", "0")) for s in losers]
-        winner_avg_cap = sum(winner_caps) / len(winner_caps) if winner_caps else 0
-        loser_avg_cap = sum(loser_caps) / len(loser_caps) if loser_caps else 0
-        f.write(f"Winners (>=33% win rate): {len(winners)} symbols\n")
-        f.write(f"Losers (<33% win rate): {len(losers)} symbols\n")
-        f.write(f"Average Volume (Winners): {round(winner_avg_vol):,}\n")
-        f.write(f"Average Volume (Losers): {round(loser_avg_vol):,}")
-        f.write(f"Average Market Cap (Winners): ${round(winner_avg_cap / 1e9, 2)}B")
-        f.write(f"Average Market Cap (Losers): ${round(loser_avg_cap / 1e9, 2)}B")
-
         print("Summary:")
         print(f"Total PnL: {round(total_pnl, 2)}")
         print(f"Number of Trades: {num_trades}")
@@ -242,10 +183,9 @@ def save_to_csv(trades, final_capital, info_map, avg_volumes, filename):
         print(f"% Change: {round(pct_change, 2)}%")
 
 if __name__ == "__main__":
-    start_date = datetime(2021, 1, 1)
-    end_date = datetime(2025, 6, 30)
-    all_trades, final_capital, info_map, avg_volumes = run(start_date, end_date)
+    start_date = datetime(2024, 6, 1)
+    end_date = datetime(2025, 6, 1)
+    all_trades, final_capital = run(start_date, end_date)
     filename = input("Enter a name for the results file (without extension): ").strip() + ".csv"
-    save_to_csv(all_trades, final_capital, info_map, avg_volumes, filename)
+    save_to_csv(all_trades, final_capital, filename)
     print(f"Saved {len(all_trades)} trades to {filename}")
-

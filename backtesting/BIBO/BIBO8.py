@@ -1,3 +1,5 @@
+import math
+
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
@@ -185,7 +187,36 @@ def simulate_market(start, end):
     return trade_log, capital, max_drawdown_pct, signals_total, signals_taken
 
 
-def save_trades_to_csv(trades, final_capital, max_drawdown_pct, signals_total, signals_taken, filename):
+def calculate_spy(start_date, end_date):
+    symbol = "SPY"
+
+    req = StockBarsRequest(symbol_or_symbols=symbol, timeframe=TimeFrame.Day, start=start_date, end=end_date)
+    bars = historicalClient.get_stock_bars(req)[symbol]
+    data = [{
+        "timestamp": pd.to_datetime(bar.timestamp).normalize(),
+        "symbol": symbol,
+        "close": bar.close,
+    } for bar in bars]
+
+    spy_initial = data[0]
+    spy_final = data[-1]
+
+    # print(spy_initial)
+    # print(spy_final)
+
+    spyPrice_initial = spy_initial["close"]
+    spyPrice_final = spy_final["close"]
+    position_size = math.floor(10000 / spyPrice_initial)
+    position_initial = position_size * spyPrice_initial
+    position_final = position_size * spyPrice_final
+    pnl = round(((position_final - position_initial) / 10000) * 100, 1)
+
+    # print(f"\n\nSPY change since 1/1/21: {pnl}%")
+
+    return pnl
+
+
+def save_trades_to_csv(trades, final_capital, max_drawdown_pct, signals_total, signals_taken, spy_performance, filename):
     if not trades:
         print("No trades to save.")
         return
@@ -216,14 +247,17 @@ def save_trades_to_csv(trades, final_capital, max_drawdown_pct, signals_total, s
         f.write(f"Signals Total: {signals_total}\n")
         f.write(f"Signals Taken: {signals_taken}\n")
         f.write(f"Signals Taken (%): {(signals_taken/signals_total)*100}\n")
+        f.write(f"SPY Performance: {spy_performance}\n")
+        f.write(f"Alpha: {round(pct_change - spy_performance, 2)}\n")
 
 
 if __name__ == "__main__":
     start_date = datetime(2021, 1, 1)
     end_date = datetime(2025, 6, 30)
     trades, final_capital, max_dd, signals_total, signals_taken = simulate_market(start_date, end_date)
+    spy_performance = calculate_spy(start_date, end_date)
     print(f"Final Capital: {final_capital:.2f}, Max Drawdown: {max_dd:.2f}%, Trades: {len(trades)}")
     filename = input("Enter a name for the results file (without extension): ").strip() + ".csv"
-    save_trades_to_csv(trades, final_capital, max_dd, signals_total, signals_taken, filename)
+    save_trades_to_csv(trades, final_capital, max_dd, signals_total, signals_taken, spy_performance, filename)
     print(f"Saved {len(trades)} trades to {filename}")
 

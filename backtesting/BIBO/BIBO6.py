@@ -15,6 +15,7 @@ import threading
 # Global lock for thread-safe capital updates
 capital_lock = threading.Lock()
 
+
 def get_sp500_symbols():
     url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
     resp = requests.get(url)
@@ -31,6 +32,7 @@ def get_sp500_symbols():
         info_map[symbol] = {"CompanyName": name, "MarketCap": market_cap}
     return symbols, info_map
 
+
 def fetch_data(symbol, start, end):
     req = StockBarsRequest(symbol_or_symbols=symbol, timeframe=TimeFrame.Day, start=start, end=end)
     bars = historicalClient.get_stock_bars(req)[symbol]
@@ -45,17 +47,34 @@ def fetch_data(symbol, start, end):
     df = pd.DataFrame(data).set_index("timestamp")
     return df
 
+
 def add_indicators(df):
+    # SMA Calculations
     df["SMA50"] = df["close"].rolling(50).mean()
     df["SMA100"] = df["close"].rolling(100).mean()
     df["SMA150"] = df["close"].rolling(150).mean()
 
+    # ATR Calculation
     high_low = df["high"] - df["low"]
     high_close = (df["high"] - df["close"].shift()).abs()
     low_close = (df["low"] - df["close"].shift()).abs()
     tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
     df["ATR14"] = tr.rolling(14).mean()
+    df["ATR20Avg"] = df["ATR14"].rolling(20).mean()
+
+    # ADX Calculation
+    delta_high = df["high"].diff()
+    delta_low = -df["low"].diff()
+    plus_dm = ((delta_high > delta_low) & (delta_high > 0)) * delta_high
+    minus_dm = ((delta_low > delta_high) & (delta_low > 0)) * delta_low
+    tr_smooth = tr.rolling(14).sum()
+    plus_di = 100 * plus_dm.rolling(14).sum() / tr_smooth
+    minus_di = 100 * minus_dm.rolling(14).sum() / tr_smooth
+    dx = 100 * (plus_di - minus_di).abs() / (plus_di + minus_di)
+    df["ADX14"] = dx.rolling(14).mean()
+
     return df
+
 
 def find_signals(df):
     signals = []
@@ -67,10 +86,16 @@ def find_signals(df):
         cond2 = yesterday["low"] < yesterday["SMA50"] < yesterday["close"]
         cond3 = today["close"] > yesterday["close"]
         cond4 = today["close"] > today["open"]
+        cond5 = today["ATR14"] > today["ATR20Avg"]
+        cond6 = today["ADX14"] > 30
 
-        if cond1 and cond2 and cond3 and cond4:
+        if cond1 and cond2 and cond3 and cond4 and cond5 and cond6:
             signals.append(i)
+
     return signals
+
+
+
 
 def simulate_trade(df, signal_index, capital):
     entry_price = df.iloc[signal_index]["close"]

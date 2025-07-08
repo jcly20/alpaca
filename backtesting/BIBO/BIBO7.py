@@ -18,15 +18,12 @@ def get_sp500_symbols():
     soup = BeautifulSoup(resp.text, "html.parser")
     table = soup.find("table", {"id": "constituents"})
     symbols = []
-    info_map = {}
     for row in table.find_all("tr")[1:]:
         cols = row.find_all("td")
         symbol = cols[0].text.strip().replace(".", "-")
-        name = cols[1].text.strip()
-        market_cap = cols[3].text.strip()
         symbols.append(symbol)
-        info_map[symbol] = {"CompanyName": name, "MarketCap": market_cap}
-    return symbols, info_map
+
+    return symbols
 
 
 def fetch_data(symbol, start, end):
@@ -58,14 +55,20 @@ def add_indicators(df):
 
 
 def find_signal_today(df, current_date):
+
     if current_date not in df.index:
         return None
+
     idx = df.index.get_loc(current_date)
     if idx < 151:
         return None
 
     today = df.iloc[idx]
     yesterday = df.iloc[idx - 1]
+
+    #indicators = ["SMA50", "SMA100", "SMA150", "ATR14"]
+    #if any(pd.isna(today[ind]) or pd.isna(yesterday.get(ind)) for ind in indicators):
+    #    return None
 
     cond1 = today["SMA50"] > today["SMA100"] > today["SMA150"]
     cond2 = yesterday["low"] < yesterday["SMA50"] < yesterday["close"]
@@ -74,34 +77,48 @@ def find_signal_today(df, current_date):
 
     if cond1 and cond2 and cond3 and cond4:
         return today
+
     return None
 
 
 def simulate_market(start, end):
-    symbols, info_map = get_sp500_symbols()
-    data_map = {}
+    symbols = get_sp500_symbols()
+    market_data = {}
 
-    for symbol in symbols:
-        try:
-            df = fetch_data(symbol, start, end)
-            df = add_indicators(df)
-            data_map[symbol] = df
-        except Exception as e:
-            print(f"Error loading {symbol}: {e}")
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = {executor.submit(fetch_data, symbol, start, end): symbol for symbol in symbols}
+        for future in concurrent.futures.as_completed(futures):
+            symbol = futures[future]
+            try:
+                df = future.result()
+                df = add_indicators(df)
+                market_data[symbol] = df
+            except Exception as e:
+                print(f"Error loading {symbol}: {e}")
+    #
+    # for symbol in symbols:
+    #     try:
+    #         df = fetch_data(symbol, start, end)
+    #         df = add_indicators(df)
+    #         market_data[symbol] = df
+    #     except Exception as e:
+    #         print(f"Error loading {symbol}: {e}")
 
     capital = 10000
+    available_capital = capital
     open_positions = []
     trade_log = []
     peak = capital
     max_drawdown = 0
 
-    all_dates = pd.date_range(start=start, end=end, freq='B')
+    all_dates = pd.date_range(start=start, end=end, freq='B', tz="UTC")
+
     for current_date in all_dates:
         # Close trades
         still_open = []
         for trade in open_positions:
             symbol = trade["Symbol"]
-            df = data_map[symbol]
+            df = market_data[symbol]
             if current_date not in df.index:
                 still_open.append(trade)
                 continue
@@ -120,6 +137,7 @@ def simulate_market(start, end):
             pnl = round((exit_price - trade["EntryPrice"]) * trade["PositionSize"], 2)
             bars_held = (current_date - trade["EntryDate"]).days
             capital += pnl
+            available_capital += ((trade["PositionSize"] * trade["EntryPrice"]) + pnl)
 
             trade_log.append({
                 **trade,
@@ -132,22 +150,27 @@ def simulate_market(start, end):
         open_positions = still_open
 
         # Open new trades
-        for symbol, df in data_map.items():
+        for symbol, df in market_data.items():
+
+            print(f"checking {symbol}")
             signal = find_signal_today(df, current_date)
             if signal is None:
                 continue
+
+            print(f"signal found in {symbol}")
 
             entry_price = signal["close"]
             atr = signal["ATR14"]
             stop_loss = entry_price - 0.5 * atr
             take_profit = entry_price + 1 * atr
-            risk = 0.005 * capital  # 0.005% of portfolio
+            risk = 0.01 * capital
             diff = entry_price - stop_loss
             position_size = risk / diff if diff > 0 else 0
-            cost = position_size * entry_price
+            required_capital = position_size * entry_price
 
-            if cost <= capital:
-                capital -= cost
+            if required_capital <= available_capital and position_size > 0:
+                print(f"opening a position in {symbol} @ {entry_price} -- portfolio = {capital}")
+                available_capital -= required_capital
                 open_positions.append({
                     "Symbol": symbol,
                     "EntryDate": current_date,
@@ -205,3 +228,4 @@ if __name__ == "__main__":
     filename = input("Enter a name for the results file (without extension): ").strip() + ".csv"
     save_trades_to_csv(trades, final_capital, max_dd, filename)
     print(f"Saved {len(trades)} trades to {filename}")
+

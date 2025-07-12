@@ -82,25 +82,8 @@ def find_signal_today(df, spy, current_date):
     return None
 
 
-def simulate_market(start, end):
-    symbols = get_sp500_symbols()
-    market_data = {}
+def simulate_market(start, end, market_data, spy_data, initial_capital, sl_multiple, tp_multiple, risk_perc):
 
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        futures = {executor.submit(fetch_data, symbol, start, end): symbol for symbol in symbols}
-        for future in concurrent.futures.as_completed(futures):
-            symbol = futures[future]
-            try:
-                df = future.result()
-                df = add_indicators(df)
-                market_data[symbol] = df
-            except Exception as e:
-                print(f"Error loading {symbol}: {e}")
-
-    spy_data = fetch_data("SPY", start, end)
-    spy_data = add_indicators(spy_data)
-
-    initial_capital = 10000
     available_capital = capital = initial_capital
     signals_total = 0
     signals_taken = 0
@@ -132,8 +115,6 @@ def simulate_market(start, end):
                 continue
 
             pnl = round((exit_price - trade["EntryPrice"]) * trade["PositionSize"], 2)
-            # slippage = round(0.1 * trade["PositionSize"], 2)
-            # pnl -= slippage
             bars_held = (current_date - trade["EntryDate"]).days
             capital += pnl
             available_capital += ((trade["PositionSize"] * trade["EntryPrice"]) + pnl)
@@ -150,7 +131,7 @@ def simulate_market(start, end):
 
         for symbol, df in market_data.items():
 
-            print(f"checking {symbol}")
+            #print(f"checking {symbol}")
             signal = find_signal_today(df, spy_data, current_date)
 
             if signal is None:
@@ -159,20 +140,20 @@ def simulate_market(start, end):
             if any(position.get("symbol") == symbol for position in open_positions):
                 continue
 
-            print(f"signal found in {symbol}")
+            #print(f"signal found in {symbol}")
             signals_total += 1
 
             entry_price = signal["close"]
             atr = signal["ATR14"]
-            stop_loss = entry_price - 0.8 * atr
-            take_profit = entry_price + 0.9 * atr
-            risk = 0.01 * capital
+            stop_loss = entry_price - sl_multiple * atr
+            take_profit = entry_price + tp_multiple * atr
+            risk = risk_perc * capital
             diff = entry_price - stop_loss
             position_size = risk / diff if diff > 0 else 0
             required_capital = position_size * entry_price
 
             if required_capital <= available_capital and position_size > 0:
-                print(f"opening a position in {symbol} @ {entry_price} -- portfolio = {capital}")
+                #print(f"opening a position in {symbol} @ {entry_price} -- portfolio = {capital}")
                 available_capital -= required_capital
                 signals_taken += 1
                 open_positions.append({
@@ -190,7 +171,7 @@ def simulate_market(start, end):
         max_drawdown = max(max_drawdown, drawdown)
 
     max_drawdown_pct = max_drawdown * 100
-    return trade_log, initial_capital, capital, max_drawdown_pct, signals_total, signals_taken
+    return trade_log, capital, max_drawdown_pct, signals_total, signals_taken
 
 
 def calculate_spy(start_date, end_date):
@@ -249,15 +230,14 @@ def save_trades_to_csv(trades, initial_capital, final_capital, max_drawdown_pct,
         avg_bars_held = sum(t["BarsHeld"] for t in trades) / num_trades if num_trades > 0 else 0
         pct_change = ((final_capital - initial_capital) / initial_capital) * 100
 
-        f.write("\nSummary:\n\n")
-        f.write(f"Strategy Description: {strategy_description}\n")
-        f.write(f"Risk Amount per Trade: {risk_amount}\n\n")
+        f.write(f"Strategy Description:\n")
+        f.write(f"Risk Amount per Trade: {risk_amount}\n")
+
+        f.write("\nSummary:\n")
         f.write(f"Total PnL: {round(total_pnl, 2)}\n")
-        f.write(f"Number of Trades: {num_trades}\n")
         f.write(f"Win Rate: {round(win_rate, 2)}%\n")
         f.write(f"Average PnL: {round(avg_pnl, 2)}\n")
         f.write(f"Average Bars Held: {round(avg_bars_held, 2)}\n")
-        f.write(f"Final Portfolio Value: {round(final_capital, 2)}\n")
         f.write(f"% Change: {round(pct_change, 2)}%\n")
         f.write(f"Max Drawdown (%): {round(max_drawdown_pct, 2)}%\n")
         f.write(f"Signals Total: {signals_total}\n")
@@ -268,12 +248,95 @@ def save_trades_to_csv(trades, initial_capital, final_capital, max_drawdown_pct,
         f.write(f"Alpha: {round(pct_change - spy_performance, 2)}\n")
 
 
+def save_parameter_stats_to_csv(stats, spy_performance, spy_drawdown, filename):
+
+    if not stats:
+        print("No trades to save.")
+        return
+
+    with open(filename, "w", newline="", encoding="utf-8") as f:
+
+        for i in stats:
+
+            trades = i["Trades"]
+            initial_capital = i["InitialCapital"]
+            final_capital = i["FinalCapital"]
+            drawdown = i["Drawdown"]
+            signals_total = i["SigTotal"]
+            signals_taken = i["SigTaken"]
+            sl_multiple = i["SLMult"]
+            tp_multiple = i["TPMult"]
+            risk = i["Risk"]
+
+            f.write(f"\n\nStrategy Description:\n")
+            f.write(f"Initial Capital: {initial_capital}\n")
+            f.write(f"Risk Amount: {risk}\n")
+            f.write(f"SL Multiple: {sl_multiple}\n")
+            f.write(f"TP Multiple: {tp_multiple}\n")
+
+            total_pnl = sum(t["PnL"] for t in trades)
+            num_trades = len(trades)
+            wins = [t for t in trades if t["PnL"] > 0]
+            win_rate = len(wins) / num_trades * 100 if num_trades > 0 else 0
+            avg_pnl = total_pnl / num_trades if num_trades > 0 else 0
+            avg_bars_held = sum(t["BarsHeld"] for t in trades) / num_trades if num_trades > 0 else 0
+            pct_change = ((final_capital - initial_capital) / initial_capital) * 100
+
+            f.write("\nSummary:\n")
+            f.write(f"Total PnL: {round(total_pnl, 2)}\n")
+            f.write(f"Win Rate: {round(win_rate, 2)}%\n")
+            f.write(f"Average PnL: {round(avg_pnl, 2)}\n")
+            f.write(f"Average Bars Held: {round(avg_bars_held, 2)}\n")
+            f.write(f"% Change: {round(pct_change, 2)}%\n")
+            f.write(f"Max Drawdown (%): {round(drawdown, 2)}%\n")
+            f.write(f"Signals Total: {signals_total}\n")
+            f.write(f"Signals Taken: {signals_taken}\n")
+            f.write(f"Signals Taken (%): {round((signals_taken / signals_total) * 100, 2)}\n")
+            f.write(f"SPY Performance: {spy_performance}%\n")
+            f.write(f"SPY Drawdown: {spy_drawdown}%\n")
+            f.write(f"Alpha: {round(pct_change - spy_performance, 2)}\n")
+
 if __name__ == "__main__":
+
     start_date = datetime(2021, 1, 1)
     end_date = datetime(2025, 6, 30)
-    trades, initial_capital, final_capital, max_dd, signals_total, signals_taken = simulate_market(start_date, end_date)
+
+    parameter_stats = []
+    num_tests = 0
+
+    symbols = get_sp500_symbols()
+    market_data = {}
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = {executor.submit(fetch_data, symbol, start_date, end_date): symbol for symbol in symbols}
+        for future in concurrent.futures.as_completed(futures):
+            symbol = futures[future]
+            try:
+                df = future.result()
+                df = add_indicators(df)
+                market_data[symbol] = df
+            except Exception as e:
+                print(f"Error loading {symbol}: {e}")
+
+    spy_data = fetch_data("SPY", start_date, end_date)
+    spy_data = add_indicators(spy_data)
+
+    initial_capital = [10000]
+    for i in initial_capital:
+        sl_multiple = [0.1, 0.2, 0.3, 0.4, 0.5]
+        for s in sl_multiple:
+            tp_multiple = [0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
+            for t in tp_multiple:
+                risk_perc = [0.0025, 0.003, 0.004, 0.005]
+                for r in risk_perc:
+
+                    trades, final_capital, max_dd, signals_total, signals_taken = simulate_market(start_date, end_date, market_data, spy_data, i, s, t, r)
+                    print(f"Test {num_tests}: Final Capital: {final_capital:.2f}, Max Drawdown: {max_dd:.2f}%, Trades: {len(trades)}")
+                    stats = {"Trades":trades, "FinalCapital":final_capital, "Drawdown":max_dd, "SigTotal":signals_total, "SigTaken":signals_taken, "InitialCapital": i, "SLMult":s, "TPMult":t, "Risk":r}
+                    parameter_stats.append(stats)
+                    num_tests += 1
+
     spy_performance, spy_drawdown = calculate_spy(start_date, end_date)
-    print(f"Final Capital: {final_capital:.2f}, Max Drawdown: {max_dd:.2f}%, Trades: {len(trades)}")
     filename = input("Enter a name for the results file (without extension): ").strip() + ".csv"
-    save_trades_to_csv(trades, initial_capital, final_capital, max_dd, signals_total, signals_taken, spy_performance, spy_drawdown, filename)
-    print(f"Saved {len(trades)} trades to {filename}")
+    save_parameter_stats_to_csv(parameter_stats, spy_performance, spy_drawdown, filename)
+    print(f"Saved stats to {filename}")

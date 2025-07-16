@@ -1,11 +1,12 @@
 
 import os
 import sys
+
 from dotenv import load_dotenv
 
 from alpaca.trading.client import TradingClient
 from alpaca.data.historical.stock import StockHistoricalDataClient
-
+from alpaca.data import DataFeed
 
 def load_credentials():
 

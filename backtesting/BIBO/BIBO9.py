@@ -1,4 +1,5 @@
 import math
+import random
 
 import pandas as pd
 import requests
@@ -8,22 +9,24 @@ import concurrent.futures
 from datetime import datetime, timedelta
 from alpaca.data.requests import StockBarsRequest
 from alpaca.data.timeframe import TimeFrame
-from account.authentication import historicalClient
+from account.authentication_paper import historicalClient
 import algorithm.tradingObjects.candle as candle
 import csv
 import pytz
 
 
 def get_sp500_symbols():
-    url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
-    resp = requests.get(url)
-    soup = BeautifulSoup(resp.text, "html.parser")
-    table = soup.find("table", {"id": "constituents"})
-    symbols = []
-    for row in table.find_all("tr")[1:]:
-        cols = row.find_all("td")
-        symbol = cols[0].text.strip().replace(".", "-")
-        symbols.append(symbol)
+    # url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+    # resp = requests.get(url)
+    # soup = BeautifulSoup(resp.text, "html.parser")
+    # table = soup.find("table", {"id": "constituents"})
+    # symbols = []
+    # for row in table.find_all("tr")[1:]:
+    #     cols = row.find_all("td")
+    #     symbol = cols[0].text.strip().replace(".", "-")
+    #     symbols.append(symbol)
+
+    symbols = ['NVDA', 'TSLA', 'INTC', 'F', 'PLTR', 'AAPL', 'SMCI', 'AMZN', 'PFE', 'AMD', 'BAC', 'WBD', 'T', 'GOOGL', 'AVGO', 'CCL', 'MU', 'CMCSA', 'MSFT', 'UBER', 'AMCR', 'CSCO', 'VZ', 'WBA', 'HBAN', 'PCG', 'WMT', 'WFC', 'HPE', 'KO', 'KVUE', 'XOM', 'NKE', 'C', 'META', 'KMI', 'SLB', 'FCX', 'AES', 'MRK', 'CSX', 'KEY', 'NCLH', 'BMY', 'GM', 'CMG', 'OXY', 'HAL', 'NEE', 'VTRS', 'KDP', 'COIN', 'PYPL', 'SBUX', 'CVS', 'NEM', 'KHC', 'LUV', 'ORCL', 'DIS', 'DAL', 'SCHW', 'JPM', 'BA', 'LRCX', 'USB', 'MCHP', 'DVN', 'MRNA', 'PARA', 'HST', 'MO', 'DELL', 'QCOM', 'RF', 'CVX', 'ON', 'TFC', 'MDLZ', 'JNJ', 'EQT', 'HPQ', 'UAL', 'GILD', 'UNH', 'APH', 'COP', 'PG', 'DOW', 'APA', 'BKR', 'VST', 'AMAT', 'WMB', 'EXC', 'PEP', 'MDT', 'ANET', 'V', 'BSX', 'MS', 'WDC', 'CTRA', 'CRM', 'TXN', 'ABBV', 'TGT', 'ABT', 'MNST', 'CAG', 'VICI', 'IPG', 'KR', 'LVS', 'CNC', 'IP', 'PM', 'CNP', 'GE', 'GLW', 'DOC', 'RTX', 'EW', 'UPS', 'O', 'TJX', 'EBAY', 'ABNB', 'ENPH', 'DDOG', 'CZR', 'MGM', 'PPL', 'CPRT', 'FTNT', 'CL', 'CFG', 'MOS', 'MTCH', 'D', 'CRWD', 'SO', 'GIS', 'CARR', 'FITB', 'KIM', 'BEN', 'IVZ', 'DXCM', 'TPR', 'BAX', 'AIG', 'JCI', 'EL', 'IBM', 'PANW', 'KKR', 'DASH', 'DLTR', 'PLD', 'SW', 'BK', 'NI', 'DG', 'TMUS', 'FE', 'APO', 'BX', 'SRE', 'SYF', 'HON', 'WY', 'MMM', 'NFLX', 'GEN', 'LLY', 'CEG', 'COF', 'FOXA', 'ADI', 'XEL', 'CTSH', 'MCD', 'GEHC', 'DHR', 'ADM', 'OKE', 'DUK', 'TSCO', 'ADBE', 'HD', 'CTVA', 'EOG', 'INVH', 'FI', 'APTV', 'FAST', 'EIX', 'FIS', 'MET', 'BBY', 'GEV', 'FSLR', 'STX', 'SYY', 'AEP', 'CPB', 'DHI', 'PSX', 'EXE', 'VLO', 'NDAQ', 'SWKS', 'K', 'EMR', 'NRG', 'ICE', 'LYB', 'NWSA', 'CCI', 'ACN', 'VTR', 'WELL', 'CSGP', 'ALB', 'AXP', 'AMGN', 'ROST', 'EA', 'ETR', 'PGR', 'HWM', 'FTV', 'PEG', 'TER', 'NXPI', 'UNP', 'HRL', 'PCAR', 'MPC', 'LEN', 'ETN', 'OMC', 'MA', 'LW', 'WYNN', 'ZTS', 'IR', 'CAT', 'GPN', 'AMT', 'LOW', 'ES', 'WDAY', 'TSN', 'DD', 'ED', 'KMX', 'GS', 'HOLX', 'RCL', 'LYV', 'LULU', 'DECK', 'CMS', 'OTIS', 'LKQ', 'FANG', 'CF', 'NUE', 'CAH', 'BALL', 'KMB', 'CME', 'UDR', 'WEC', 'TAP', 'AFL', 'PNC', 'STT', 'EVRG', 'BDX', 'AKAM', 'MKC', 'COST', 'PHM', 'CDNS', 'SWK', 'DLR', 'YUM', 'TMO', 'PAYX', 'MMC', 'LIN', 'WSM', 'INCY', 'STZ', 'NTAP', 'EXPE', 'BRO', 'FDX', 'PPG', 'A', 'TRGP', 'HES', 'MAS', 'ZBH', 'CBRE', 'HUM', 'HSY', 'WRB', 'HLT', 'TTWO', 'IRM', 'EQR', 'CHD', 'ROL', 'DAY', 'HAS', 'COO', 'CI', 'ACGL', 'LNT', 'HSIC', 'BLDR', 'SHW', 'TEL', 'ADP', 'BG', 'ISRG', 'PRU', 'IQV', 'ODFL', 'CB', 'ALL', 'WM', 'ELV', 'INTU', 'HIG', 'MAR', 'AEE', 'SPG', 'TROW', 'IFF', 'STLD', 'COR', 'ADSK', 'NOW', 'TECH', 'CTAS', 'PNR', 'HCA', 'BIIB', 'NTRS', 'VRTX', 'XYL', 'JBL', 'CLX', 'TRMB', 'VLTO', 'GD', 'ARE', 'AJG', 'LMT', 'APD', 'SYK', 'BXP', 'DE', 'DRI', 'GDDY', 'TT', 'RJF', 'PFG', 'SJM', 'AME', 'GPC', 'AOS', 'DTE', 'CHRW', 'TRV', 'LDOS', 'TXT', 'CHTR', 'EXPD', 'EMN', 'AWK', 'NSC', 'CDW', 'SPGI', 'MTB', 'SNPS', 'ECL', 'PWR', 'AON', 'LHX', 'RSG', 'PNW', 'KLAC', 'FOX', 'TKO']
 
     return symbols
 
@@ -129,7 +132,14 @@ def simulate_market(start, end, market_data, spy_data, initial_capital, sl_multi
 
         open_positions = still_open
 
-        for symbol, df in market_data.items():
+        # Convert the items to a list and shuffle it
+        items = list(market_data.items())
+        random.shuffle(items)
+
+        # Loop through randomized symbol-data pairs
+        for symbol, df in items:
+
+        #for symbol, df in market_data.items():
 
             #print(f"checking {symbol}")
             signal = find_signal_today(df, spy_data, current_date)
@@ -323,11 +333,11 @@ if __name__ == "__main__":
 
     initial_capital = [10000]
     for i in initial_capital:
-        sl_multiple = [0.1, 0.2, 0.3, 0.4, 0.5]
+        sl_multiple = [0.2, 0.4, 0.5]
         for s in sl_multiple:
-            tp_multiple = [0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
+            tp_multiple = [0.8, 1, 1.2]
             for t in tp_multiple:
-                risk_perc = [0.0025, 0.003, 0.004, 0.005]
+                risk_perc = [0.005, 1]
                 for r in risk_perc:
 
                     trades, final_capital, max_dd, signals_total, signals_taken = simulate_market(start_date, end_date, market_data, spy_data, i, s, t, r)

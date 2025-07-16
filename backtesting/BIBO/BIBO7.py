@@ -6,7 +6,7 @@ import concurrent.futures
 from datetime import datetime, timedelta
 from alpaca.data.requests import StockBarsRequest
 from alpaca.data.timeframe import TimeFrame
-from account.authentication import historicalClient
+from account.authentication_paper import historicalClient
 import algorithm.tradingObjects.candle as candle
 import csv
 import pytz

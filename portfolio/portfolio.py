@@ -1,6 +1,6 @@
 
 
-from account.authentication import client, historicalClient
+from account.authentication_paper import client, historicalClient
 
 
 def showAccountInfo():

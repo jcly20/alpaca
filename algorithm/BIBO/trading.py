@@ -33,7 +33,7 @@ def submit_order(capital, symbol, qty, entry, sl, tp):
     client.submit_order(order)
 
     total_risk = qty * (entry - sl)
-    save_position(capital, symbol, entry, sl, tp, qty, total_risk)
+    save_position(capital, symbol, timestamp, entry, sl, tp, qty, total_risk)
 
     message = (
         f"📈 Limit Order Placed for {symbol} @ ${entry:.2f} | SL: ${sl:.2f} | TP: ${tp:.2f}\n"
@@ -64,13 +64,13 @@ def load_open_positions():
     return positions
 
 
-def save_position(capital, symbol, entry, sl, tp, qty, total_risk):
+def save_position(capital, symbol, timestamp, entry, sl, tp, qty, total_risk):
     file_exists = os.path.isfile(POSITION_CSV)
     with open(POSITION_CSV, 'a', newline='') as f:
         writer = csv.writer(f)
         if not file_exists:
-            writer.writerow(['capital', 'symbol', 'entry', 'sl', 'tp', 'qty', 'total_risk'])
-        writer.writerow([round(capital, 2), symbol, round(entry, 2), round(sl, 2), round(tp, 2), qty, round(total_risk, 2)])
+            writer.writerow(['capital', 'symbol', 'time_stamp', 'entry', 'sl', 'tp', 'qty', 'total_risk'])
+        writer.writerow([round(capital, 2), symbol, timestamp, round(entry, 2), round(sl, 2), round(tp, 2), qty, round(total_risk, 2)])
 
 
 def account_info():

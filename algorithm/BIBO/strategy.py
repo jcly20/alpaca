@@ -1,30 +1,28 @@
 
 #strategy.py
-import pandas as pd
-from alpaca.data.historical import StockHistoricalDataClient
-from alpaca.data.requests import StockBarsRequest
-from alpaca.data.timeframe import TimeFrame
-from datetime import datetime, timedelta
-from config import SYMBOLS, RISK_PER_TRADE, ATR_STOP_MULT, ATR_TP_MULT
-from trading import submit_limit_order, load_open_positions, save_open_position
+
+import sys
+import os
+
+# Add the root of your repo (2 levels up from main.py)
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
+from config import SPY, SPY_VOL, RISK_PER_TRADE, ATR_STOP_MULT, ATR_TP_MULT
+from trading import submit_order, load_open_positions
 from notification import send_discord_alert
-import pytz
 from account.authentication_paper import client, historicalClient
 
-def calculate_indicators(df):
-    df['SMA50'] = df['close'].rolling(50).mean()
-    df['SMA100'] = df['close'].rolling(100).mean()
-    df['SMA150'] = df['close'].rolling(150).mean()
-    df['H-L'] = df['high'] - df['low']
-    df['H-PC'] = abs(df['high'] - df['close'].shift(1))
-    df['L-PC'] = abs(df['low'] - df['close'].shift(1))
-    df['TR'] = df[['H-L', 'H-PC', 'L-PC']].max(axis=1)
-    df['ATR'] = df['TR'].rolling(14).mean()
-    return df.dropna()
+import pandas as pd
+from datetime import datetime, timedelta, time
+import pytz
+
+from alpaca.data.requests import StockBarsRequest, StockSnapshotRequest
+from alpaca.data.timeframe import TimeFrame
+
 
 def fetch_data(symbol):
     end = datetime.now(pytz.UTC) - timedelta(days=1)
-    start = end - timedelta(days=365)
+    start = end - timedelta(days=230)
     request = StockBarsRequest(
         symbol_or_symbols=symbol,
         timeframe=TimeFrame.Day,
@@ -34,32 +32,106 @@ def fetch_data(symbol):
     bars = historicalClient.get_stock_bars(request).df
     if bars.empty or symbol not in bars.index.get_level_values(0):
         return None
+
     df = bars.xs(symbol, level=0).copy()
     df.index = df.index.tz_convert('US/Eastern')
-    return calculate_indicators(df)
+
+    df = df.drop(columns=["vwap", "trade_count"])
+
+    latest_bar_resp = historicalClient.get_stock_snapshot(StockSnapshotRequest(symbol_or_symbols=symbol))
+    latest_bar = latest_bar_resp[symbol].daily_bar
+
+    latest_df = pd.DataFrame([{
+        "open": latest_bar.open,
+        "high": latest_bar.high,
+        "low": latest_bar.low,
+        "close": latest_bar.close,
+        "volume": latest_bar.volume
+    }], index=[latest_bar.timestamp.astimezone(pytz.timezone('US/Eastern'))])
+
+    df = pd.concat([df, latest_df])
+
+    return df
+
+
+def calculate_indicators(df):
+
+    df['SMA50'] = df['close'].rolling(50).mean()
+    df['SMA100'] = df['close'].rolling(100).mean()
+    df['SMA150'] = df['close'].rolling(150).mean()
+    df['H-L'] = df['high'] - df['low']
+    df['H-PC'] = abs(df['high'] - df['close'].shift(1))
+    df['L-PC'] = abs(df['low'] - df['close'].shift(1))
+    df['TR'] = df[['H-L', 'H-PC', 'L-PC']].max(axis=1)
+    df['ATR'] = df['TR'].rolling(14).mean()
+
+    return df.dropna()
+
+
+def check_spy():
+
+    print("spy")
+    spy_df = fetch_data("SPY")
+    spy_df['SMA150'] = spy_df['close'].rolling(150).mean()
+
+    if spy_df is None or len(spy_df) < 1:
+        send_discord_alert("❌ SPY data insufficient.")
+        return False
+
+    today = spy_df.iloc[-1]
+    if today['close'] <= today['SMA150']:
+        send_discord_alert("⚠️ No trades: SPY is below its 150SMA.")
+        return False
+
+    send_discord_alert("✅ Scanning: SPY is above its 150SMA.")
+
+    return True
+
 
 def check_signal(df):
     today = df.iloc[-1]
-    prev = df.iloc[-2]
+    yesterday = df.iloc[-2]
 
-    if (
-        prev['low'] < prev['SMA50'] and prev['close'] > prev['SMA50'] and
-        today['close'] > prev['close'] and today['close'] > today['open'] and
-        today['SMA50'] > today['SMA100'] > today['SMA150']
-    ):
+    cond1 = today["SMA50"] > today["SMA100"] > today["SMA150"]
+    cond2 = yesterday["low"] < yesterday["SMA50"] < yesterday["close"]
+    cond3 = today["close"] > yesterday["close"]
+    cond4 = today["close"] > today["open"]
+
+    if cond1 and cond2 and cond3 and cond4:
         return True, today
+
     return False, None
 
+
+def time_check():
+
+    if not time(15, 50) <= datetime.now().time() < time(16, 0):
+        send_discord_alert("❌ BIBO Timed Out")
+        return False
+
+    return True
+
+
 def run_strategy():
-    positions = load_open_positions()
+
+    positions = list(load_open_positions().keys())
     account = client.get_account()
     capital = float(account.cash)
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    for symbol in SYMBOLS:
+
+    if not time_check():
+        return
+
+    if not check_spy():
+        return
+
+    for symbol in SPY_VOL:
+        print(f"scanning: {symbol}")
         if symbol in positions:
+            print(f"{symbol} already in portfolio")
             continue
         df = fetch_data(symbol)
-        if df is None or len(df) < 150:
+        df = calculate_indicators(df)
+        if df is None or len(df) < 1:
             continue
         signal, today = check_signal(df)
         if not signal:
@@ -70,33 +142,10 @@ def run_strategy():
         entry = today['close']
         sl = entry - ATR_STOP_MULT * atr
         tp = entry + ATR_TP_MULT * atr
-        qty = int(risk / (entry - sl))
+        qty = risk / (entry - sl)
 
         if qty < 1:
             continue
 
-        submit_limit_order(symbol, qty, entry)
-        save_open_position(symbol, entry, sl, tp, qty)
-        total_risk = qty * (entry - sl)
-        message = (
-            f"📈 Limit Order Placed for {symbol} @ ${entry:.2f} | SL: ${sl:.2f} | TP: ${tp:.2f}\n"
-            f"💰 Account Balance: ${capital:.2f} | Risked: ${total_risk:.2f} | Qty: {qty}\n"
-            f"🕒 {timestamp}"
-        )
-        send_discord_alert(message)
+        submit_order(capital, symbol, qty, entry, sl, tp)
 
-
-def account_info():
-
-    account = client.get_account()
-    capital = float(account.cash)
-    portfolioValue = float(account.portfolio_value)
-    positions = client.get_all_positions()
-
-    openPositions = {}
-    for pos in positions:
-        symbol = pos.symbol
-        pnl = float(pos.unrealized_pl)
-        openPositions[symbol] = pnl
-
-    return openPositions, capital, portfolioValue

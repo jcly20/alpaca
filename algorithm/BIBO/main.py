@@ -1,13 +1,22 @@
 
 
 # main.py
-from apscheduler.schedulers.blocking import BlockingScheduler
-from datetime import datetime
-import logging
+
+import sys
+import os
+
+# Add the root of your repo (2 levels up from main.py)
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from config import SCHEDULE_HOUR, SCHEDULE_MINUTE
-from algorithm.BIBO.notification import send_discord_alert
-from strategy import run_strategy, account_info
+from notification import send_discord_alert
+from strategy import run_strategy
+from trading import account_info
+
+from datetime import datetime
+from apscheduler.schedulers.blocking import BlockingScheduler
+import logging
+
 
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s:%(message)s')
@@ -15,13 +24,13 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s:%(mess
 scheduler = BlockingScheduler()
 
 #@scheduler.scheduled_job('cron', day_of_week='mon-fri', hour=SCHEDULE_HOUR, minute=SCHEDULE_MINUTE) #10 minutes before close
-@scheduler.scheduled_job('cron', day_of_week='mon-fri', hour=16, minute=34) #custom
+#@scheduler.scheduled_job('cron', day_of_week='mon-fri', hour=12, minute=38) #custom
 def scheduled_run():
 
     openPositions, capital, portfolioValue = account_info()
     dailyUpdate = f"Total Capital: {capital}\n"
     dailyUpdate += f"Portfolio Value: {portfolioValue}\n"
-    dailyUpdate += "".join(f"{symbol:<5} - {pnl:>7.2f}\n" for symbol, pnl in openPositions.items())
+    dailyUpdate += "".join(f"\t{symbol:<5} - {pnl:>7.2f}\n" for symbol, pnl in openPositions.items())
     send_discord_alert(dailyUpdate)
 
     logging.info("Running BIBO Strategy Scan...")
@@ -43,4 +52,7 @@ def scheduled_run():
 
 if __name__ == "__main__":
     logging.info("Starting BIBO Scheduler...")
-    scheduler.start()
+
+    #scheduler.start()
+
+    scheduled_run()

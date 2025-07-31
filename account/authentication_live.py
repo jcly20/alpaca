@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 from alpaca.trading.client import TradingClient
 from alpaca.data.historical.stock import StockHistoricalDataClient
-from alpaca.data import DataFeed
+
 
 def load_credentials():
 
@@ -20,11 +20,12 @@ def load_credentials():
     accUUID = os.getenv("accUUID")
     api_key = os.getenv("API_KEY")
     secret_key = os.getenv("SECRET_KEY")
+    webhook = os.getenv("DISCORD_WEBHOOK")
 
     if not email or not password or not paperAcc or not liveAcc or not paperAccUUID or not accUUID or not api_key or not secret_key:
         raise ValueError("Missing credentials in .env")
 
-    return email, password, paperAcc, liveAcc, paperAccUUID, accUUID, api_key, secret_key
+    return email, password, paperAcc, liveAcc, paperAccUUID, accUUID, api_key, secret_key, webhook
 
 
 def load_client(email, api_key, secret_key):
@@ -43,7 +44,7 @@ def load_client(email, api_key, secret_key):
 
 
 #load credentials
-email, password, paperAcc, liveAcc, paperAccUUID, accUUID, api_key, secret_key = load_credentials()
+email, password, paperAcc, liveAcc, paperAccUUID, accUUID, api_key, secret_key, webhook = load_credentials()
 
 #create client and historical client
 try:

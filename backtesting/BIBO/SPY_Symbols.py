@@ -1,3 +1,4 @@
+import random
 from datetime import datetime, timedelta
 
 import pandas as pd
@@ -50,10 +51,11 @@ spy_volumes = {'MMM': 3801607.828, 'AOS': 1302558.404, 'ABT': 6153908.812, 'ABBV
 spy_volumes_sorted = dict(sorted(spy_volumes.items(), key=lambda item: item[1], reverse=True))
 
 print(spy)
+print(random.shuffle(spy))
 print(spy_volumes)
 print(spy_volumes_sorted)
 
-spy_sorted = list(spy_volumes_sorted.keys())[:400]
+spy_sorted = list(spy_volumes_sorted.keys())[:500]
 
 print(len(spy_sorted))
 print(spy_sorted)

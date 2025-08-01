@@ -8,16 +8,21 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from config import SPY, SPY_VOL, RISK_PER_TRADE, ATR_STOP_MULT, ATR_TP_MULT
-from trading import submit_order, load_open_positions
+from trading import submit_order, load_open_positions, load_bto_orders
 from notification import send_discord_alert
+from logger import logger
 from account.authentication_paper import client, historicalClient
 
 import pandas as pd
 from datetime import datetime, timedelta, time
 import pytz
+import math
 
 from alpaca.data.requests import StockBarsRequest, StockSnapshotRequest
+from alpaca.trading.requests import GetOrdersRequest
 from alpaca.data.timeframe import TimeFrame
+from alpaca.trading.enums import OrderSide
+
 
 
 def fetch_data(symbol):
@@ -59,18 +64,17 @@ def calculate_indicators(df):
     df['SMA50'] = df['close'].rolling(50).mean()
     df['SMA100'] = df['close'].rolling(100).mean()
     df['SMA150'] = df['close'].rolling(150).mean()
-    df['H-L'] = df['high'] - df['low']
-    df['H-PC'] = abs(df['high'] - df['close'].shift(1))
-    df['L-PC'] = abs(df['low'] - df['close'].shift(1))
-    df['TR'] = df[['H-L', 'H-PC', 'L-PC']].max(axis=1)
-    df['ATR'] = df['TR'].rolling(14).mean()
+    high_low = df["high"] - df["low"]
+    high_close = (df["high"] - df["close"].shift()).abs()
+    low_close = (df["low"] - df["close"].shift()).abs()
+    tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
+    df["ATR"] = tr.rolling(14).mean()
 
     return df.dropna()
 
 
 def check_spy():
 
-    print("spy")
     spy_df = fetch_data("SPY")
     spy_df['SMA150'] = spy_df['close'].rolling(150).mean()
 
@@ -84,6 +88,8 @@ def check_spy():
         return False
 
     send_discord_alert("✅ Scanning: SPY is above its 150SMA.")
+    logger.info("SPY trading above 150SMA")
+
 
     return True
 
@@ -105,34 +111,59 @@ def check_signal(df):
 
 def time_check():
 
-    if not time(15, 50) <= datetime.now().time() < time(16, 0):
+    if not time(15, 45) <= datetime.now().time() < time(16, 0):
         send_discord_alert("❌ BIBO Timed Out")
+        logger.info("time_check: invalid")
+
         return False
 
+    logger.info("time_check: valid")
     return True
+
+
+def clear_bto_orders():
+    open_orders = client.get_orders(GetOrdersRequest(status="open"))
+
+    try:
+        for order in open_orders:
+            if order.side == OrderSide.BUY:
+                print(f"Cancelling BUY order: {order.id} - {order.symbol}")
+                client.cancel_order_by_id(order.id)
+                logger.info(f"canceling bto order for {order.symbol}")
+    except Exception as e:
+        logger.error(f"error canceling orders: {e}")
 
 
 def run_strategy():
 
     positions = list(load_open_positions().keys())
+    bto_orders = load_bto_orders()
     account = client.get_account()
     capital = float(account.cash)
 
-    if not time_check():
-        return
+    # if not time_check():
+    #     return
 
     if not check_spy():
         return
 
-    for symbol in SPY_VOL:
-        print(f"scanning: {symbol}")
+    clear_bto_orders()
+
+    for symbol in SPY:
+        timestamp = timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+
         if symbol in positions:
-            print(f"{symbol} already in portfolio")
+            logger.info(f"position exists: {symbol}")
             continue
+        if symbol in bto_orders:
+            logger.info(f"bto order exists: {symbol}")
+            continue
+
         df = fetch_data(symbol)
         df = calculate_indicators(df)
-        if df is None or len(df) < 1:
+        if df is None or len(df) < 2:
             continue
+
         signal, today = check_signal(df)
         if not signal:
             continue
@@ -144,8 +175,18 @@ def run_strategy():
         tp = entry + ATR_TP_MULT * atr
         qty = risk / (entry - sl)
 
-        if qty < 1:
+        qty = math.floor(qty)
+        entry = float(entry)
+        cost_basis = qty * entry
+        sl = round(float(sl), 2)
+        tp = round(float(tp), 2)
+
+        if qty < 1 or cost_basis > capital:
+            logger.info(f"out of bounds: {symbol} @ {timestamp} - cost_basis: {cost_basis}")
             continue
 
-        submit_order(capital, symbol, qty, entry, sl, tp)
+        try:
+            submit_order(capital, symbol, qty, entry, sl, tp)
+        except Exception as e:
+            logger.error(f"Error submitting order in {symbol}: {e}")
 

@@ -12,19 +12,13 @@ from config import SCHEDULE_HOUR, SCHEDULE_MINUTE
 from notification import send_discord_alert
 from strategy import run_strategy
 from trading import account_info
+from logger import logger
 
 from datetime import datetime
-from apscheduler.schedulers.blocking import BlockingScheduler
-import logging
+
+#redo order logging
 
 
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s:%(message)s')
-
-scheduler = BlockingScheduler()
-
-#@scheduler.scheduled_job('cron', day_of_week='mon-fri', hour=SCHEDULE_HOUR, minute=SCHEDULE_MINUTE) #10 minutes before close
-#@scheduler.scheduled_job('cron', day_of_week='mon-fri', hour=12, minute=38) #custom
 def scheduled_run():
 
     openPositions, capital, portfolioValue = account_info()
@@ -32,27 +26,27 @@ def scheduled_run():
     dailyUpdate += f"Portfolio Value: {portfolioValue}\n"
     dailyUpdate += "".join(f"\t{symbol:<5} - {pnl:>7.2f}\n" for symbol, pnl in openPositions.items())
     send_discord_alert(dailyUpdate)
-
-    logging.info("Running BIBO Strategy Scan...")
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-    send_discord_alert(f"🚀 BIBO started at {timestamp}")
+    logger.info(dailyUpdate)
 
     try:
+        logger.info("Running BIBO Strategy Scan...")
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+        send_discord_alert(f"🚀 BIBO started at {timestamp}")
 
         run_strategy()
-        logging.info("BIBO Strategy Scan completed successfully.")
+
+        logger.info("BIBO Strategy Scan completed successfully.")
         timestamp = datetime.now().strftime("%H:%M")
         send_discord_alert(f"✅ BIBO completed at {timestamp}")
 
     except Exception as e:
-        logging.error("BIBO failed to scan", exc_info=True)
+        logger.error("BIBO failed to scan", exc_info=True)
         timestamp = datetime.now().strftime("%H:%M")
         send_discord_alert(f"❗ BIBO failed at {timestamp}")
 
 
 if __name__ == "__main__":
-    logging.info("Starting BIBO Scheduler...")
-
-    #scheduler.start()
-
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    logger.info(f"\n\n\n -- booting application --")
     scheduled_run()
+

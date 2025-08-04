@@ -141,8 +141,8 @@ def run_strategy():
     account = client.get_account()
     capital = float(account.cash)
 
-    # if not time_check():
-    #     return
+    if not time_check():
+        return
 
     if not check_spy():
         return

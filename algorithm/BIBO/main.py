@@ -16,6 +16,8 @@ from logger import logger
 
 from datetime import datetime
 
+#fix app loggign for taski - import logger to machine
+#fix time_check
 #redo order logging
 
 

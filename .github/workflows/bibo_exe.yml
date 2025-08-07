@@ -18,5 +18,19 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Run a test
-        run: echo "✅ GitHub Actions is working!"
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run bot
+        env:
+          EMAIL: ${{ secrets.EMAIL }}
+          PASSWORD: ${{ secrets.PASSWORD }}
+          PAPERACC: ${{ secrets.PAPERACC }}
+          LIVEACC: ${{ secrets.LIVEACC }}
+          PAPERACCUUID: ${{ secrets.PAPERACCUUID }}
+          ACCUUID: ${{ secrets.ACCUUID }}
+          API_KEY: ${{ secrets.API_KEY }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        run: python alpaca/algorithm/BIBO/main.py

@@ -23,6 +23,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run bot
+        working-directory: alpaca
         env:
           EMAIL: ${{ secrets.EMAIL }}
           PASSWORD: ${{ secrets.PASSWORD }}

@@ -23,7 +23,6 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run bot
-        working-directory: alpaca
         env:
           EMAIL: ${{ secrets.EMAIL }}
           PASSWORD: ${{ secrets.PASSWORD }}
@@ -34,4 +33,4 @@ jobs:
           API_KEY: ${{ secrets.API_KEY }}
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-        run: python alpaca/algorithm/BIBO/main.py
+        run: python algorithm/BIBO/main.py

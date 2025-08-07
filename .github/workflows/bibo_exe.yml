@@ -3,7 +3,6 @@ name: bibo_exe
 on:
   schedule:
     - cron: '40 19 * * *'  # 1:45 PM MDT / 19:45 UTC
-  workflow_dispatch:
 
 jobs:
   run-bot:

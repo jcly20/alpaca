@@ -4,9 +4,6 @@
 import sys
 import os
 
-# Add the root of your repo (2 levels up from main.py)
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-
 from config import SPY, SPY_VOL, RISK_PER_TRADE, ATR_STOP_MULT, ATR_TP_MULT
 from trading import submit_order, load_open_positions, load_bto_orders
 from notification import send_discord_alert
@@ -23,6 +20,7 @@ from alpaca.trading.requests import GetOrdersRequest
 from alpaca.data.timeframe import TimeFrame
 from alpaca.trading.enums import OrderSide
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 
 def fetch_data(symbol):
@@ -102,6 +100,7 @@ def check_signal(df):
     cond2 = yesterday["low"] < yesterday["SMA50"] < yesterday["close"]
     cond3 = today["close"] > yesterday["close"]
     cond4 = today["close"] > today["open"]
+    cond5 = today["low"] < yesterday["high"] * 1.05
 
     if cond1 and cond2 and cond3 and cond4:
         return True, today
@@ -111,10 +110,10 @@ def check_signal(df):
 
 def time_check():
 
-    if not time(15, 45) <= datetime.now().time() < time(16, 0):
+    if not time(13, 45) <= datetime.now().time() < time(14, 0):
+        print(datetime.now().time())
         send_discord_alert("❌ BIBO Timed Out")
         logger.info("time_check: invalid")
-
         return False
 
     logger.info("time_check: valid")
@@ -176,7 +175,7 @@ def run_strategy():
         qty = risk / (entry - sl)
 
         qty = math.floor(qty)
-        entry = float(entry)
+        entry = round(float(entry)*1.0025)
         cost_basis = qty * entry
         sl = round(float(sl), 2)
         tp = round(float(tp), 2)

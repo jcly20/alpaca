@@ -4,9 +4,6 @@
 import sys
 import os
 
-# Add the root of your repo (2 levels up from main.py)
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-
 from notification import send_discord_alert
 from config import POSITION_CSV
 from logger import logger
@@ -17,6 +14,8 @@ from _datetime import datetime
 
 from alpaca.trading.requests import OrderRequest, TakeProfitRequest, StopLossRequest, LimitOrderRequest, GetOrdersRequest
 from alpaca.trading.enums import OrderSide, OrderType, TimeInForce, OrderClass
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 
 def submit_order(capital, symbol, qty, entry, sl, tp):
@@ -90,7 +89,7 @@ def save_position(capital, symbol, timestamp, entry, sl, tp, qty, total_risk):
     with open(POSITION_CSV, 'a', newline='') as f:
         writer = csv.writer(f)
         if not file_exists:
-            writer.writerow(['capital', 'symbol', 'time_stamp', 'entry', 'sl', 'tp', 'qty', 'total_risk'])
+            writer.writerow(['time_stamp', 'capital', 'symbol', 'entry', 'sl', 'tp', 'qty', 'total_risk'])
         writer.writerow([round(capital, 2), symbol, timestamp, round(entry, 2), round(sl, 2), round(tp, 2), qty, round(total_risk, 2)])
 
 

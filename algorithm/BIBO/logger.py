@@ -7,11 +7,10 @@ import os
 import os
 import logging
 
-# Get absolute path to 'logs/trading.log' relative to this script
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-LOG_DIR = os.path.join(BASE_DIR, "logs")
+from config import LOG_DIR, LOG_FILE
+
+
 os.makedirs(LOG_DIR, exist_ok=True)
-LOG_FILE = os.path.join(LOG_DIR, "trading.log")
 
 # Create a single logger instance
 logger = logging.getLogger("alpaca_trader")

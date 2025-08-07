@@ -5,9 +5,6 @@
 import sys
 import os
 
-# Add the root of your repo (2 levels up from main.py)
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-
 from config import SCHEDULE_HOUR, SCHEDULE_MINUTE
 from notification import send_discord_alert
 from strategy import run_strategy
@@ -16,9 +13,11 @@ from logger import logger
 
 from datetime import datetime
 
-#fix app loggign for taski - import logger to machine
-#fix time_check
-#redo order logging
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
+
+#reconfigure captial allocation
+
 
 
 def scheduled_run():

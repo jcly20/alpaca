@@ -77,9 +77,8 @@ def find_signal_today(df, spy, current_date):
     cond2 = yesterday["low"] < yesterday["SMA50"] < yesterday["close"]
     cond3 = today["close"] > yesterday["close"]
     cond4 = today["close"] > today["open"]
-    cond5 = today["low"] < yesterday["high"] * 1.05
 
-    if cond1 and cond2 and cond3 and cond4 and cond5:
+    if cond1 and cond2 and cond3 and cond4:
         return today
 
     return None
@@ -165,9 +164,9 @@ def simulate_market(start, end):
             atr = signal["ATR14"]
             stop_loss = entry_price - 0.4 * atr
             take_profit = entry_price + 1.2 * atr
-            risk = 0.01 * (capital / 2)
+            risk = 0.01 * capital
             diff = entry_price - stop_loss
-            position_size = risk / diff if diff > 0 else 0
+            position_size = int((capital * .3) / entry_price)
             required_capital = position_size * entry_price
 
             if required_capital <= available_capital and position_size > 0:

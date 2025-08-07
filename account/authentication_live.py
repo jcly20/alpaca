@@ -12,12 +12,12 @@ def load_credentials():
 
     load_dotenv()
 
-    email = os.getenv("email")
-    password = os.getenv("pw")
-    paperAcc = os.getenv("paperAcc")
-    liveAcc = os.getenv("liveAcc")
-    paperAccUUID = os.getenv("paperAccUUID")
-    accUUID = os.getenv("accUUID")
+    email = os.getenv("EMAIL")
+    password = os.getenv("PASSWORD")
+    paperAcc = os.getenv("PAPERACC")
+    liveAcc = os.getenv("LIVEACC")
+    paperAccUUID = os.getenv("PAPERACCUUID")
+    accUUID = os.getenv("ACCUUID")
     api_key = os.getenv("API_KEY")
     secret_key = os.getenv("SECRET_KEY")
     webhook = os.getenv("DISCORD_WEBHOOK")

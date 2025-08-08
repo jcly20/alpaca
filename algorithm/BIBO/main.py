@@ -48,6 +48,7 @@ def scheduled_run():
 if __name__ == "__main__":
     timestamp = datetime.now(tz=MST).strftime("%Y-%m-%d %H:%M")
     logger.info(f"\n\n\n -- booting application: {timestamp} -- ")
+    send_discord_alert(f" -- booting application: {timestamp} -- ")
 
     timecheck = datetime.now(tz=MST).time()
     while not time(13, 48) <= timecheck < time(13, 58):

@@ -11,13 +11,12 @@ from strategy import run_strategy
 from trading import account_info
 from logger import logger
 
-from datetime import datetime
+from datetime import datetime, time
+import time as t
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-
 #reconfigure captial allocation
-
 
 
 def scheduled_run():
@@ -30,8 +29,8 @@ def scheduled_run():
     logger.info(dailyUpdate)
 
     try:
-        logger.info("Running BIBO Strategy Scan...")
         timestamp = datetime.now(tz=MST).strftime("%Y-%m-%d %H:%M")
+        logger.info(f"Running BIBO Strategy Scan: {timestamp} -- ")
         send_discord_alert(f"🚀 BIBO started at {timestamp}")
 
         run_strategy()
@@ -48,6 +47,13 @@ def scheduled_run():
 
 if __name__ == "__main__":
     timestamp = datetime.now(tz=MST).strftime("%Y-%m-%d %H:%M")
-    logger.info(f"\n\n\n -- booting application --\n{timestamp}")
+    logger.info(f"\n\n\n -- booting application: {timestamp} -- ")
+
+    timecheck = datetime.now(tz=MST).time()
+    while not time(13, 48) <= timecheck < time(13, 58):
+        logger.info(f"-- delay BIBO: {timecheck.strftime('%H:%M')} -- ")
+        t.sleep(120)
+        timecheck = datetime.now(tz=MST).time()
+
     scheduled_run()
 

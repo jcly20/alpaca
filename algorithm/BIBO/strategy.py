@@ -112,7 +112,7 @@ def time_check():
 
     timestamp = datetime.now(tz=MST).time()
 
-    if not time(13, 45) <= timestamp < time(21, 0):
+    if not time(13, 45) <= timestamp < time(14, 0):
         print(datetime.now().time())
         send_discord_alert(f"❌ BIBO Timed Out - {timestamp}")
         logger.info(f"time_check: invalid - {timestamp}")

@@ -4,7 +4,7 @@
 import sys
 import os
 
-from config import SPY, SPY_VOL, RISK_PER_TRADE, ATR_STOP_MULT, ATR_TP_MULT
+from config import SPY, SPY_VOL, RISK_PER_TRADE, ATR_STOP_MULT, ATR_TP_MULT, MST
 from trading import submit_order, load_open_positions, load_bto_orders
 from notification import send_discord_alert
 from logger import logger
@@ -110,13 +110,15 @@ def check_signal(df):
 
 def time_check():
 
-    if not time(13, 45) <= datetime.now().time() < time(14, 0):
+    timestamp = datetime.now(tz=MST).time()
+
+    if not time(13, 45) <= timestamp < time(21, 0):
         print(datetime.now().time())
-        send_discord_alert("❌ BIBO Timed Out")
-        logger.info("time_check: invalid")
+        send_discord_alert(f"❌ BIBO Timed Out - {timestamp}")
+        logger.info(f"time_check: invalid - {timestamp}")
         return False
 
-    logger.info("time_check: valid")
+    logger.info(f"time_check: valid - {timestamp}")
     return True
 
 
@@ -149,7 +151,7 @@ def run_strategy():
     clear_bto_orders()
 
     for symbol in SPY:
-        timestamp = timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+        timestamp = datetime.now(tz=MST).strftime("%Y-%m-%d %H:%M")
 
         if symbol in positions:
             logger.info(f"position exists: {symbol}")

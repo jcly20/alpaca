@@ -2,6 +2,8 @@
 #config.py
 
 import os
+from zoneinfo import ZoneInfo
+
 
 BASE_URL = "https://paper-api.alpaca.markets"
 
@@ -29,6 +31,8 @@ ATR_TP_MULT = 1.2
 
 SCHEDULE_HOUR = 13
 SCHEDULE_MINUTE = 50  # 10 mins before market close
+
+MST = ZoneInfo("America/Denver")
 
 
 

@@ -5,7 +5,7 @@
 import sys
 import os
 
-from config import SCHEDULE_HOUR, SCHEDULE_MINUTE
+from config import SCHEDULE_HOUR, SCHEDULE_MINUTE, MST
 from notification import send_discord_alert
 from strategy import run_strategy
 from trading import account_info
@@ -31,23 +31,23 @@ def scheduled_run():
 
     try:
         logger.info("Running BIBO Strategy Scan...")
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+        timestamp = datetime.now(tz=MST).strftime("%Y-%m-%d %H:%M")
         send_discord_alert(f"🚀 BIBO started at {timestamp}")
 
         run_strategy()
 
         logger.info("BIBO Strategy Scan completed successfully.")
-        timestamp = datetime.now().strftime("%H:%M")
+        timestamp = datetime.now(tz=MST).strftime("%H:%M")
         send_discord_alert(f"✅ BIBO completed at {timestamp}")
 
     except Exception as e:
         logger.error("BIBO failed to scan", exc_info=True)
-        timestamp = datetime.now().strftime("%H:%M")
+        timestamp = datetime.now(tz=MST).strftime("%H:%M")
         send_discord_alert(f"❗ BIBO failed at {timestamp}")
 
 
 if __name__ == "__main__":
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-    logger.info(f"\n\n\n -- booting application --")
+    timestamp = datetime.now(tz=MST).strftime("%Y-%m-%d %H:%M")
+    logger.info(f"\n\n\n -- booting application --\n{timestamp}")
     scheduled_run()
 

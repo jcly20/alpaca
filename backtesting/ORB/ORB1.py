@@ -49,8 +49,8 @@ def find_orb_signal_and_execute(df, current_date, capital):
         if entry is None and row["high"] > high:
             entry = high
             range = round(high - low, 2)
-            stop = high - range / 2
-            target = high + (range * 2)
+            stop = high - (range / 4)
+            target = high + (range)
             entry_time = t
             break
 

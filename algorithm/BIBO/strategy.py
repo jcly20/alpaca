@@ -177,7 +177,7 @@ def run_strategy():
         qty = risk / (entry - sl)
 
         qty = math.floor(qty)
-        entry = round(float(entry)*1.0025)
+        entry = round(float(entry)*1.0025, 2)
         cost_basis = qty * entry
         sl = round(float(sl), 2)
         tp = round(float(tp), 2)

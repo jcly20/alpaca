@@ -2,7 +2,8 @@ name: bibo_exe
 
 on:
   schedule:
-    - cron: '40 18 * * *' #13:50 PM MDT / 19:45 UTC
+    - cron: '0 18 * * 1-5' #12MST M-F
+#    - cron: '40 18 * * *' #13:50 PM MDT / 19:45 UTC
 #    - cron: '00 02 * * *' #2000 - 2127
 #    - cron: '10 02 * * *' #2010 - 2149
 #    - cron: '20 02 * * *' #2020 - 2150

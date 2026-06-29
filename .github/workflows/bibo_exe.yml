@@ -2,7 +2,7 @@ name: bibo_exe
 
 on:
   schedule:
-    - cron: '0 17 * * 1-5' #1300EST M-F
+    - cron: '0 16 * * 1-5' #1300EST M-F ?
 #    - cron: '40 18 * * *' #13:50 PM MDT / 19:45 UTC
 
   workflow_dispatch:

@@ -166,7 +166,7 @@ def simulate_market(start, end):
             take_profit = entry_price + 1.2 * atr
             risk = 0.01 * capital
             diff = entry_price - stop_loss
-            position_size = int((capital * .3) / entry_price)
+            position_size = risk / diff if diff > 0 else 0
             required_capital = position_size * entry_price
 
             if required_capital <= available_capital and position_size > 0:
@@ -283,7 +283,7 @@ def save_trades_to_csv(trades, initial_capital, final_capital, max_drawdown_pct,
 
 
 if __name__ == "__main__":
-    start_date = datetime(2021, 1, 1)
+    start_date = datetime(2025, 1, 1)
     end_date = datetime(2025, 6, 30)
     trades, initial_capital, final_capital, max_dd, signals_total, signals_taken = simulate_market(start_date, end_date)
     spy_performance, spy_drawdown = calculate_spy(start_date, end_date)

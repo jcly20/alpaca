@@ -16,25 +16,16 @@ import pytz
 
 
 def get_sp500_symbols():
-    # url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
-    # resp = requests.get(url)
-    # soup = BeautifulSoup(resp.text, "html.parser")
-    # table = soup.find("table", {"id": "constituents"})
-    # symbols = []
-    # for row in table.find_all("tr")[1:]:
-    #     cols = row.find_all("td")
-    #     symbol = cols[0].text.strip().replace(".", "-")
-    #     symbols.append(symbol)
 
-    # symbols = ['NVDA', 'TSLA', 'INTC', 'F', 'PLTR', 'AAPL', 'SMCI', 'AMZN', 'PFE', 'AMD', 'BAC', 'WBD', 'T', 'GOOGL', 'AVGO', 'CCL', 'MU', 'CMCSA', 'MSFT', 'UBER', 'AMCR', 'CSCO', 'VZ', 'WBA', 'HBAN', 'PCG', 'WMT', 'WFC', 'HPE', 'KO', 'KVUE', 'XOM', 'NKE', 'C', 'META', 'KMI', 'SLB', 'FCX', 'AES', 'MRK', 'CSX', 'KEY', 'NCLH', 'BMY', 'GM', 'CMG', 'OXY', 'HAL', 'NEE', 'VTRS', 'KDP', 'COIN', 'PYPL', 'SBUX', 'CVS', 'NEM', 'KHC', 'LUV', 'ORCL', 'DIS', 'DAL', 'SCHW', 'JPM', 'BA', 'LRCX', 'USB', 'MCHP', 'DVN', 'MRNA', 'PARA', 'HST', 'MO', 'DELL', 'QCOM', 'RF', 'CVX', 'ON', 'TFC', 'MDLZ', 'JNJ', 'EQT', 'HPQ', 'UAL', 'GILD', 'UNH', 'APH', 'COP', 'PG', 'DOW', 'APA', 'BKR', 'VST', 'AMAT', 'WMB', 'EXC', 'PEP', 'MDT', 'ANET', 'V', 'BSX', 'MS', 'WDC', 'CTRA', 'CRM', 'TXN', 'ABBV', 'TGT', 'ABT', 'MNST', 'CAG', 'VICI', 'IPG', 'KR', 'LVS', 'CNC', 'IP', 'PM', 'CNP', 'GE', 'GLW', 'DOC', 'RTX', 'EW', 'UPS', 'O', 'TJX', 'EBAY', 'ABNB', 'ENPH', 'DDOG', 'CZR', 'MGM', 'PPL', 'CPRT', 'FTNT', 'CL', 'CFG', 'MOS', 'MTCH', 'D', 'CRWD', 'SO', 'GIS', 'CARR', 'FITB', 'KIM', 'BEN', 'IVZ', 'DXCM', 'TPR', 'BAX', 'AIG', 'JCI', 'EL', 'IBM', 'PANW', 'KKR', 'DASH', 'DLTR', 'PLD', 'SW', 'BK', 'NI', 'DG', 'TMUS', 'FE', 'APO', 'BX', 'SRE', 'SYF', 'HON', 'WY', 'MMM', 'NFLX', 'GEN', 'LLY', 'CEG', 'COF', 'FOXA', 'ADI', 'XEL', 'CTSH', 'MCD', 'GEHC', 'DHR', 'ADM', 'OKE', 'DUK', 'TSCO', 'ADBE', 'HD', 'CTVA', 'EOG', 'INVH', 'FI', 'APTV', 'FAST', 'EIX', 'FIS', 'MET', 'BBY', 'GEV', 'FSLR', 'STX', 'SYY', 'AEP', 'CPB', 'DHI', 'PSX', 'EXE', 'VLO', 'NDAQ', 'SWKS', 'K', 'EMR', 'NRG', 'ICE', 'LYB', 'NWSA', 'CCI', 'ACN', 'VTR', 'WELL', 'CSGP', 'ALB', 'AXP', 'AMGN', 'ROST', 'EA', 'ETR', 'PGR', 'HWM', 'FTV', 'PEG', 'TER', 'NXPI', 'UNP', 'HRL', 'PCAR', 'MPC', 'LEN', 'ETN', 'OMC', 'MA', 'LW', 'WYNN', 'ZTS', 'IR', 'CAT', 'GPN', 'AMT', 'LOW', 'ES', 'WDAY', 'TSN', 'DD', 'ED', 'KMX', 'GS', 'HOLX', 'RCL', 'LYV', 'LULU', 'DECK', 'CMS', 'OTIS', 'LKQ', 'FANG', 'CF', 'NUE', 'CAH', 'BALL', 'KMB', 'CME', 'UDR', 'WEC', 'TAP', 'AFL', 'PNC', 'STT', 'EVRG', 'BDX', 'AKAM', 'MKC', 'COST', 'PHM', 'CDNS', 'SWK', 'DLR', 'YUM', 'TMO', 'PAYX', 'MMC', 'LIN', 'WSM', 'INCY', 'STZ', 'NTAP', 'EXPE', 'BRO', 'FDX', 'PPG', 'A', 'TRGP', 'HES', 'MAS', 'ZBH', 'CBRE', 'HUM', 'HSY', 'WRB', 'HLT', 'TTWO', 'IRM', 'EQR', 'CHD', 'ROL', 'DAY', 'HAS', 'COO', 'CI', 'ACGL', 'LNT', 'HSIC', 'BLDR', 'SHW', 'TEL', 'ADP', 'BG', 'ISRG', 'PRU', 'IQV', 'ODFL', 'CB', 'ALL', 'WM', 'ELV', 'INTU', 'HIG', 'MAR', 'AEE', 'SPG', 'TROW', 'IFF', 'STLD', 'COR', 'ADSK', 'NOW', 'TECH', 'CTAS', 'PNR', 'HCA', 'BIIB', 'NTRS', 'VRTX', 'XYL', 'JBL', 'CLX', 'TRMB', 'VLTO', 'GD', 'ARE', 'AJG', 'LMT', 'APD', 'SYK', 'BXP', 'DE', 'DRI', 'GDDY', 'TT', 'RJF', 'PFG', 'SJM', 'AME', 'GPC', 'AOS', 'DTE', 'CHRW', 'TRV', 'LDOS', 'TXT', 'CHTR', 'EXPD', 'EMN', 'AWK', 'NSC', 'CDW', 'SPGI', 'MTB', 'SNPS', 'ECL', 'PWR', 'AON', 'LHX', 'RSG', 'PNW', 'KLAC', 'FOX', 'TKO']
-
-    symbols = ['MMM', 'AOS', 'ABT', 'ABBV', 'ACN', 'ADBE', 'AMD', 'AES', 'AFL', 'A', 'APD', 'ABNB', 'AKAM', 'ALB', 'ARE', 'ALGN', 'ALLE', 'LNT', 'ALL', 'GOOGL', 'MO', 'AMZN', 'AMCR', 'AEE', 'AEP', 'AXP', 'AIG', 'AMT', 'AWK', 'AMP', 'AME', 'AMGN', 'APH', 'ADI', 'ANSS', 'AON', 'APA', 'APO', 'AAPL', 'AMAT', 'APTV', 'ACGL', 'ADM', 'ANET', 'AJG', 'AIZ', 'T', 'ATO', 'ADSK', 'ADP', 'AZO', 'AVB', 'AVY', 'AXON', 'BKR', 'BALL', 'BAC', 'BAX', 'BDX', 'BBY', 'TECH', 'BIIB', 'BLK', 'BX', 'BK', 'BA', 'BKNG', 'BSX', 'BMY', 'AVGO', 'BR', 'BRO', 'BLDR', 'BG', 'BXP', 'CHRW', 'CDNS', 'CZR', 'CPT', 'CPB', 'COF', 'CAH', 'KMX', 'CCL', 'CARR', 'CAT', 'CBOE', 'CBRE', 'CDW', 'COR', 'CNC', 'CNP', 'CF', 'CRL', 'SCHW', 'CHTR', 'CVX', 'CMG', 'CB', 'CHD', 'CI', 'CINF', 'CTAS', 'CSCO', 'C', 'CFG', 'CLX', 'CME', 'CMS', 'KO', 'CTSH', 'COIN', 'CL', 'CMCSA', 'CAG', 'COP', 'ED', 'STZ', 'CEG', 'COO', 'CPRT', 'GLW', 'CPAY', 'CTVA', 'CSGP', 'COST', 'CTRA', 'CRWD', 'CCI', 'CSX', 'CMI', 'CVS', 'DHR', 'DRI', 'DDOG', 'DVA', 'DAY', 'DECK', 'DE', 'DELL', 'DAL', 'DVN', 'DXCM', 'FANG', 'DLR', 'DG', 'DLTR', 'D', 'DPZ', 'DASH', 'DOV', 'DOW', 'DHI', 'DTE', 'DUK', 'DD', 'EMN', 'ETN', 'EBAY', 'ECL', 'EIX', 'EW', 'EA', 'ELV', 'EMR', 'ENPH', 'ETR', 'EOG', 'EPAM', 'EQT', 'EFX', 'EQIX', 'EQR', 'ERIE', 'ESS', 'EL', 'EG', 'EVRG', 'ES', 'EXC', 'EXE', 'EXPE', 'EXPD', 'EXR', 'XOM', 'FFIV', 'FDS', 'FICO', 'FAST', 'FRT', 'FDX', 'FIS', 'FITB', 'FSLR', 'FE', 'FI', 'F', 'FTNT', 'FTV', 'FOXA', 'FOX', 'BEN', 'FCX', 'GRMN', 'IT', 'GE', 'GEHC', 'GEV', 'GEN', 'GNRC', 'GD', 'GIS', 'GM', 'GPC', 'GILD', 'GPN', 'GL', 'GDDY', 'GS', 'HAL', 'HIG', 'HAS', 'HCA', 'DOC', 'HSIC', 'HSY', 'HES', 'HPE', 'HLT', 'HOLX', 'HD', 'HON', 'HRL', 'HST', 'HWM', 'HPQ', 'HUBB', 'HUM', 'HBAN', 'HII', 'IBM', 'IEX', 'IDXX', 'ITW', 'INCY', 'IR', 'PODD', 'INTC', 'ICE', 'IFF', 'IP', 'IPG', 'INTU', 'ISRG', 'IVZ', 'INVH', 'IQV', 'IRM', 'JBHT', 'JBL', 'JKHY', 'J', 'JNJ', 'JCI', 'JPM', 'K', 'KVUE', 'KDP', 'KEY', 'KEYS', 'KMB', 'KIM', 'KMI', 'KKR', 'KLAC', 'KHC', 'KR', 'LHX', 'LH', 'LRCX', 'LW', 'LVS', 'LDOS', 'LEN', 'LII', 'LLY', 'LIN', 'LYV', 'LKQ', 'LMT', 'L', 'LOW', 'LULU', 'LYB', 'MTB', 'MPC', 'MKTX', 'MAR', 'MMC', 'MLM', 'MAS', 'MA', 'MTCH', 'MKC', 'MCD', 'MCK', 'MDT', 'MRK', 'META', 'MET', 'MTD', 'MGM', 'MCHP', 'MU', 'MSFT', 'MAA', 'MRNA', 'MHK', 'MOH', 'TAP', 'MDLZ', 'MPWR', 'MNST', 'MCO', 'MS', 'MOS', 'MSI', 'MSCI', 'NDAQ', 'NTAP', 'NFLX', 'NEM', 'NWSA', 'NWS', 'NEE', 'NKE', 'NI', 'NDSN', 'NSC', 'NTRS', 'NOC', 'NCLH', 'NRG', 'NUE', 'NVDA', 'NVR', 'NXPI', 'ORLY', 'OXY', 'ODFL', 'OMC', 'ON', 'OKE', 'ORCL', 'OTIS', 'PCAR', 'PKG', 'PLTR', 'PANW', 'PARA', 'PH', 'PAYX', 'PAYC', 'PYPL', 'PNR', 'PEP', 'PFE', 'PCG', 'PM', 'PSX', 'PNW', 'PNC', 'POOL', 'PPG', 'PPL', 'PFG', 'PG', 'PGR', 'PLD', 'PRU', 'PEG', 'PTC', 'PSA', 'PHM', 'PWR', 'QCOM', 'DGX', 'RL', 'RJF', 'RTX', 'O', 'REG', 'REGN', 'RF', 'RSG', 'RMD', 'RVTY', 'ROK', 'ROL', 'ROP', 'ROST', 'RCL', 'SPGI', 'CRM', 'SBAC', 'SLB', 'STX', 'SRE', 'NOW', 'SHW', 'SPG', 'SWKS', 'SJM', 'SW', 'SNA', 'SOLV', 'SO', 'LUV', 'SWK', 'SBUX', 'STT', 'STLD', 'STE', 'SYK', 'SMCI', 'SYF', 'SNPS', 'SYY', 'TMUS', 'TROW', 'TTWO', 'TPR', 'TRGP', 'TGT', 'TEL', 'TDY', 'TER', 'TSLA', 'TXN', 'TPL', 'TXT', 'TMO', 'TJX', 'TKO', 'TSCO', 'TT', 'TDG', 'TRV', 'TRMB', 'TFC', 'TYL', 'TSN', 'USB', 'UBER', 'UDR', 'ULTA', 'UNP', 'UAL', 'UPS', 'URI', 'UNH', 'UHS', 'VLO', 'VTR', 'VLTO', 'VRSN', 'VRSK', 'VZ', 'VRTX', 'VTRS', 'VICI', 'V', 'VST', 'VMC', 'WRB', 'GWW', 'WAB', 'WBA', 'WMT', 'DIS', 'WBD', 'WM', 'WAT', 'WEC', 'WFC', 'WELL', 'WST', 'WDC', 'WY', 'WSM', 'WMB', 'WTW', 'WDAY', 'WYNN', 'XEL', 'XYL', 'YUM', 'ZBRA', 'ZBH', 'ZTS']
+    #symbols = ['MMM', 'AOS', 'ABT', 'ABBV', 'ACN', 'ADBE', 'AMD', 'AES', 'AFL', 'A', 'APD', 'ABNB', 'AKAM', 'ALB', 'ARE', 'ALGN', 'ALLE', 'LNT', 'ALL', 'GOOGL', 'MO', 'AMZN', 'AMCR', 'AEE', 'AEP', 'AXP', 'AIG', 'AMT', 'AWK', 'AMP', 'AME', 'AMGN', 'APH', 'ADI', 'ANSS', 'AON', 'APA', 'APO', 'AAPL', 'AMAT', 'APTV', 'ACGL', 'ADM', 'ANET', 'AJG', 'AIZ', 'T', 'ATO', 'ADSK', 'ADP', 'AZO', 'AVB', 'AVY', 'AXON', 'BKR', 'BALL', 'BAC', 'BAX', 'BDX', 'BBY', 'TECH', 'BIIB', 'BLK', 'BX', 'BK', 'BA', 'BKNG', 'BSX', 'BMY', 'AVGO', 'BR', 'BRO', 'BLDR', 'BG', 'BXP', 'CHRW', 'CDNS', 'CZR', 'CPT', 'CPB', 'COF', 'CAH', 'KMX', 'CCL', 'CARR', 'CAT', 'CBOE', 'CBRE', 'CDW', 'COR', 'CNC', 'CNP', 'CF', 'CRL', 'SCHW', 'CHTR', 'CVX', 'CMG', 'CB', 'CHD', 'CI', 'CINF', 'CTAS', 'CSCO', 'C', 'CFG', 'CLX', 'CME', 'CMS', 'KO', 'CTSH', 'COIN', 'CL', 'CMCSA', 'CAG', 'COP', 'ED', 'STZ', 'CEG', 'COO', 'CPRT', 'GLW', 'CPAY', 'CTVA', 'CSGP', 'COST', 'CTRA', 'CRWD', 'CCI', 'CSX', 'CMI', 'CVS', 'DHR', 'DRI', 'DDOG', 'DVA', 'DAY', 'DECK', 'DE', 'DELL', 'DAL', 'DVN', 'DXCM', 'FANG', 'DLR', 'DG', 'DLTR', 'D', 'DPZ', 'DASH', 'DOV', 'DOW', 'DHI', 'DTE', 'DUK', 'DD', 'EMN', 'ETN', 'EBAY', 'ECL', 'EIX', 'EW', 'EA', 'ELV', 'EMR', 'ENPH', 'ETR', 'EOG', 'EPAM', 'EQT', 'EFX', 'EQIX', 'EQR', 'ERIE', 'ESS', 'EL', 'EG', 'EVRG', 'ES', 'EXC', 'EXE', 'EXPE', 'EXPD', 'EXR', 'XOM', 'FFIV', 'FDS', 'FICO', 'FAST', 'FRT', 'FDX', 'FIS', 'FITB', 'FSLR', 'FE', 'FI', 'F', 'FTNT', 'FTV', 'FOXA', 'FOX', 'BEN', 'FCX', 'GRMN', 'IT', 'GE', 'GEHC', 'GEV', 'GEN', 'GNRC', 'GD', 'GIS', 'GM', 'GPC', 'GILD', 'GPN', 'GL', 'GDDY', 'GS', 'HAL', 'HIG', 'HAS', 'HCA', 'DOC', 'HSIC', 'HSY', 'HES', 'HPE', 'HLT', 'HOLX', 'HD', 'HON', 'HRL', 'HST', 'HWM', 'HPQ', 'HUBB', 'HUM', 'HBAN', 'HII', 'IBM', 'IEX', 'IDXX', 'ITW', 'INCY', 'IR', 'PODD', 'INTC', 'ICE', 'IFF', 'IP', 'IPG', 'INTU', 'ISRG', 'IVZ', 'INVH', 'IQV', 'IRM', 'JBHT', 'JBL', 'JKHY', 'J', 'JNJ', 'JCI', 'JPM', 'K', 'KVUE', 'KDP', 'KEY', 'KEYS', 'KMB', 'KIM', 'KMI', 'KKR', 'KLAC', 'KHC', 'KR', 'LHX', 'LH', 'LRCX', 'LW', 'LVS', 'LDOS', 'LEN', 'LII', 'LLY', 'LIN', 'LYV', 'LKQ', 'LMT', 'L', 'LOW', 'LULU', 'LYB', 'MTB', 'MPC', 'MKTX', 'MAR', 'MMC', 'MLM', 'MAS', 'MA', 'MTCH', 'MKC', 'MCD', 'MCK', 'MDT', 'MRK', 'META', 'MET', 'MTD', 'MGM', 'MCHP', 'MU', 'MSFT', 'MAA', 'MRNA', 'MHK', 'MOH', 'TAP', 'MDLZ', 'MPWR', 'MNST', 'MCO', 'MS', 'MOS', 'MSI', 'MSCI', 'NDAQ', 'NTAP', 'NFLX', 'NEM', 'NWSA', 'NWS', 'NEE', 'NKE', 'NI', 'NDSN', 'NSC', 'NTRS', 'NOC', 'NCLH', 'NRG', 'NUE', 'NVDA', 'NVR', 'NXPI', 'ORLY', 'OXY', 'ODFL', 'OMC', 'ON', 'OKE', 'ORCL', 'OTIS', 'PCAR', 'PKG', 'PLTR', 'PANW', 'PARA', 'PH', 'PAYX', 'PAYC', 'PYPL', 'PNR', 'PEP', 'PFE', 'PCG', 'PM', 'PSX', 'PNW', 'PNC', 'POOL', 'PPG', 'PPL', 'PFG', 'PG', 'PGR', 'PLD', 'PRU', 'PEG', 'PTC', 'PSA', 'PHM', 'PWR', 'QCOM', 'DGX', 'RL', 'RJF', 'RTX', 'O', 'REG', 'REGN', 'RF', 'RSG', 'RMD', 'RVTY', 'ROK', 'ROL', 'ROP', 'ROST', 'RCL', 'SPGI', 'CRM', 'SBAC', 'SLB', 'STX', 'SRE', 'NOW', 'SHW', 'SPG', 'SWKS', 'SJM', 'SW', 'SNA', 'SOLV', 'SO', 'LUV', 'SWK', 'SBUX', 'STT', 'STLD', 'STE', 'SYK', 'SMCI', 'SYF', 'SNPS', 'SYY', 'TMUS', 'TROW', 'TTWO', 'TPR', 'TRGP', 'TGT', 'TEL', 'TDY', 'TER', 'TSLA', 'TXN', 'TPL', 'TXT', 'TMO', 'TJX', 'TKO', 'TSCO', 'TT', 'TDG', 'TRV', 'TRMB', 'TFC', 'TYL', 'TSN', 'USB', 'UBER', 'UDR', 'ULTA', 'UNP', 'UAL', 'UPS', 'URI', 'UNH', 'UHS', 'VLO', 'VTR', 'VLTO', 'VRSN', 'VRSK', 'VZ', 'VRTX', 'VTRS', 'VICI', 'V', 'VST', 'VMC', 'WRB', 'GWW', 'WAB', 'WBA', 'WMT', 'DIS', 'WBD', 'WM', 'WAT', 'WEC', 'WFC', 'WELL', 'WST', 'WDC', 'WY', 'WSM', 'WMB', 'WTW', 'WDAY', 'WYNN', 'XEL', 'XYL', 'YUM', 'ZBRA', 'ZBH', 'ZTS']
+    symbols= ["IDX", "UBER", "LRCX", "HCA", "COF", "HWM", "APTV", "CSGP", "RCL", "JBL", "BG", "EL", "RL", "DASH", "TPR", "PLTR", "PANW", "MU", "KLAC", "COR", "FCX", "FOXA"]
 
     return symbols
 
 
-def fetch_data(symbol, start, end):
-    req = StockBarsRequest(symbol_or_symbols=symbol, timeframe=TimeFrame.Day, start=start, end=end)
+def fetch_data(symbol, start, end, buffer_days=400):
+    buffered_start = start - timedelta(days=buffer_days)
+    req = StockBarsRequest(symbol_or_symbols=symbol, timeframe=TimeFrame.Day, start=buffered_start, end=end)
     bars = historicalClient.get_stock_bars(req)[symbol]
     data = [{
         "timestamp": pd.to_datetime(bar.timestamp).normalize(),
@@ -50,14 +41,14 @@ def fetch_data(symbol, start, end):
 
 
 def add_indicators(df):
-    df["SMA50"] = df["close"].rolling(50).mean()
-    df["SMA100"] = df["close"].rolling(100).mean()
-    df["SMA150"] = df["close"].rolling(150).mean()
+    df["SMA50"] = df["close"].rolling(50, min_periods=50).mean()
+    df["SMA100"] = df["close"].rolling(100, min_periods=100).mean()
+    df["SMA150"] = df["close"].rolling(150, min_periods=150).mean()
     high_low = df["high"] - df["low"]
     high_close = (df["high"] - df["close"].shift()).abs()
     low_close = (df["low"] - df["close"].shift()).abs()
     tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
-    df["ATR14"] = tr.rolling(14).mean()
+    df["ATR14"] = tr.rolling(14, min_periods=14).mean()
     return df
 
 
@@ -66,7 +57,8 @@ def find_signal_today(df, spy, current_date):
         return None
 
     idx = df.index.get_loc(current_date)
-    if idx < 151:
+
+    if idx < 1:
         return None
 
     today = df.iloc[idx]
@@ -142,8 +134,8 @@ def simulate_market(start, end):
                 **trade,
                 "ExitPrice": round(exit_price, 2),
                 "Outcome": outcome,
-                "PnL": pnl,
-                "BarsHeld": bars_held
+                "BarsHeld": bars_held,
+                "PnL": pnl
             })
 
         open_positions = still_open
@@ -155,18 +147,18 @@ def simulate_market(start, end):
             if signal is None:
                 continue
 
-            if any(position.get("symbol") == symbol for position in open_positions):
+            if any(position.get("Symbol") == symbol for position in open_positions):
                 continue
 
             signals_total += 1
 
-            entry_price = signal["close"]
+            entry_price = signal["close"] * 1.0025
             atr = signal["ATR14"]
             stop_loss = entry_price - 0.4 * atr
             take_profit = entry_price + 1.2 * atr
-            risk = 0.01 * capital
+            risk = 0.01 * available_capital
             diff = entry_price - stop_loss
-            position_size = risk / diff if diff > 0 else 0
+            position_size = math.floor(risk / diff) if diff > 0 else 0
             required_capital = position_size * entry_price
 
             if required_capital <= available_capital and position_size > 0:
@@ -221,8 +213,7 @@ def calculate_spy(start_date, end_date):
 
 
 def save_trades_to_csv(trades, initial_capital, final_capital, max_drawdown_pct, signals_total, signals_taken,
-                       spy_performance, spy_drawdown,
-                       filename):
+                       spy_performance, spy_drawdown, filename):
     if not trades:
         print("No trades to save.")
         return
@@ -283,8 +274,8 @@ def save_trades_to_csv(trades, initial_capital, final_capital, max_drawdown_pct,
 
 
 if __name__ == "__main__":
-    start_date = datetime(2021, 8, 1)
-    end_date = datetime(2025, 8, 30)
+    start_date = datetime(2025, 8, 3)
+    end_date = datetime(2025, 9, 10)
     trades, initial_capital, final_capital, max_dd, signals_total, signals_taken = simulate_market(start_date, end_date)
     spy_performance, spy_drawdown = calculate_spy(start_date, end_date)
     print(f"Final Capital: {final_capital:.2f}, Max Drawdown: {max_dd:.2f}%, Trades: {len(trades)}")

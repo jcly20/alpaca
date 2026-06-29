@@ -57,4 +57,3 @@ if __name__ == "__main__":
         timecheck = datetime.now(tz=MST).time()
 
     scheduled_run()
-

@@ -58,6 +58,8 @@ def fetch_data(symbol):
 
 
 def calculate_indicators(df):
+    if df is None or df.empty:
+        return None
 
     df['SMA50'] = df['close'].rolling(50).mean()
     df['SMA100'] = df['close'].rolling(100).mean()
@@ -88,7 +90,6 @@ def check_spy():
     send_discord_alert("✅ Scanning: SPY is above its 150SMA.")
     logger.info("SPY trading above 150SMA")
 
-
     return True
 
 
@@ -112,7 +113,7 @@ def time_check():
 
     timestamp = datetime.now(tz=MST).time()
 
-    if not time(13, 45) <= timestamp < time(14, 0):
+    if not time(13, 45) <= timestamp < time(18, 58):
         print(datetime.now().time())
         send_discord_alert(f"❌ BIBO Timed Out - {timestamp}")
         logger.info(f"time_check: invalid - {timestamp}")
@@ -161,6 +162,10 @@ def run_strategy():
             continue
 
         df = fetch_data(symbol)
+        if df is None or df.empty:
+            logger.warning(f"No data returned for {symbol}")
+            continue
+
         df = calculate_indicators(df)
         if df is None or len(df) < 2:
             continue

@@ -5,7 +5,7 @@
 import sys
 import os
 
-from config import SCHEDULE_HOUR, SCHEDULE_MINUTE, MST
+from config import SCHEDULE_HOUR, SCHEDULE_MINUTE, MST, EST, UTC
 from notification import send_discord_alert
 from strategy import run_strategy
 from trading import account_info
@@ -51,7 +51,7 @@ if __name__ == "__main__":
     send_discord_alert(f" -- booting application: {timestamp} -- ")
 
     timecheck = datetime.now(tz=MST).time()
-    while not time(13, 48) <= timecheck < time(13, 58):
+    while not time(13, 48) <= timecheck < time(18, 58):
         logger.info(f"-- delay BIBO: {timecheck.strftime('%H:%M')} -- ")
         t.sleep(120)
         timecheck = datetime.now(tz=MST).time()

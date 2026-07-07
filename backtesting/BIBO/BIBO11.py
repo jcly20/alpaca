@@ -63,14 +63,16 @@ def find_signal_today(df, spy, current_date):
 
     today = df.iloc[idx]
     yesterday = df.iloc[idx - 1]
+    spy_today = spy.iloc[idx]
 
     cond1 = today["SMA50"] > today["SMA100"] > today["SMA150"]
     cond2 = yesterday["low"] < yesterday["SMA50"] < yesterday["close"]
     cond3 = today["close"] > yesterday["close"]
     cond4 = today["close"] > today["open"]
-    cond5 = today["low"] < yesterday["high"] * 1.05
+    cond5 = spy_today["close"] > spy_today["SMA150"]
+    cond6 = today["low"] < yesterday["high"] * 1.05
 
-    if cond1 and cond2 and cond3 and cond4:
+    if cond1 and cond2 and cond3 and cond4 and cond5:
         return today
 
     return None

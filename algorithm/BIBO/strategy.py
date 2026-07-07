@@ -151,7 +151,7 @@ def run_strategy():
 
     clear_bto_orders()
 
-    for symbol in SPY:
+    for symbol in SPY_VOL:
         timestamp = datetime.now(tz=MST).strftime("%Y-%m-%d %H:%M")
 
         if symbol in positions:

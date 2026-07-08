@@ -81,10 +81,10 @@ def find_signal_today(df, spy, current_date):
     cond3 = today["close"] > yesterday["close"]
     cond4 = today["close"] > today["open"]
     cond5 = spy_today["close"] > spy_today["SMA150"]
-    cond6 = rs > 0.5
-    cond6 = today["low"] < yesterday["high"] * 1.05
+    cond6 = rs > 0
+    #cond6 = today["low"] < yesterday["high"] * 1.05
 
-    if cond1 and cond2 and cond3 and cond4 and cond5:
+    if cond1 and cond2 and cond3 and cond4 and cond5 and cond6:
         return today
 
     return None

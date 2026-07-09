@@ -4,7 +4,7 @@
 import sys
 import os
 
-from config import SPY, SPY_VOL, RISK_PER_TRADE, ATR_STOP_MULT, ATR_TP_MULT, MST
+from config import SPY_HARD, SPY_VOL_HARD, RISK_PER_TRADE, ATR_STOP_MULT, ATR_TP_MULT, MST
 from trading import submit_order, load_open_positions, load_bto_orders
 from notification import send_discord_alert
 from logger import logger
@@ -32,7 +32,11 @@ def fetch_data(symbol):
         start=start,
         end=end,
     )
-    bars = historicalClient.get_stock_bars(request).df
+    try:
+        bars = historicalClient.get_stock_bars(request).df
+    except Exception as e:
+        logger.warning(f"Skipping {symbol}: {e}")
+        return None
     if bars.empty or symbol not in bars.index.get_level_values(0):
         return None
 
@@ -57,6 +61,23 @@ def fetch_data(symbol):
     return df
 
 
+def generate_symbols():
+    spy_holdings = pd.read_excel("spy_holdings.xlsx", skiprows=4)
+    spy_symbols = spy_holdings["Ticker"].dropna().tolist()
+    volume_rank = {}
+
+    for symbol in spy_symbols:
+        df = fetch_data(symbol)
+        if df is None or len(df) < 20:
+            continue
+        avg_dollar_volume = (df["close"] * df["volume"]).tail(20).mean()
+        volume_rank[symbol] = avg_dollar_volume
+
+    spy = sorted(volume_rank, key=volume_rank.get, reverse=True)
+    print(spy)
+    return spy
+
+
 def calculate_indicators(df):
     if df is None or df.empty:
         return None
@@ -68,15 +89,17 @@ def calculate_indicators(df):
     high_close = (df["high"] - df["close"].shift()).abs()
     low_close = (df["low"] - df["close"].shift()).abs()
     tr = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
-    df["ATR"] = tr.rolling(14).mean()
+    df['ATR'] = tr.rolling(14).mean()
+    df['stock_return'] = df['close'].iloc[-1] / df['close'].iloc[-21] - 1
 
     return df.dropna()
 
 
-def check_spy():
+def spy_data():
 
     spy_df = fetch_data("SPY")
     spy_df['SMA150'] = spy_df['close'].rolling(150).mean()
+    spy_return = spy_df['close'].iloc[-1] / spy_df['close'].iloc[-21] - 1
 
     if spy_df is None or len(spy_df) < 1:
         send_discord_alert("❌ SPY data insufficient.")
@@ -90,10 +113,10 @@ def check_spy():
     send_discord_alert("✅ Scanning: SPY is above its 150SMA.")
     logger.info("SPY trading above 150SMA")
 
-    return True
+    return True, spy_return
 
 
-def check_signal(df):
+def check_signal(df, spy_return):
     today = df.iloc[-1]
     yesterday = df.iloc[-2]
 
@@ -101,9 +124,9 @@ def check_signal(df):
     cond2 = yesterday["low"] < yesterday["SMA50"] < yesterday["close"]
     cond3 = today["close"] > yesterday["close"]
     cond4 = today["close"] > today["open"]
-    cond5 = today["low"] < yesterday["high"] * 1.05
+    cond5 = today["stock_return"] - spy_return
 
-    if cond1 and cond2 and cond3 and cond4:
+    if cond1 and cond2 and cond3 and cond4 and cond5 > 0:
         return True, today
 
     return False, None
@@ -113,7 +136,7 @@ def time_check():
 
     timestamp = datetime.now(tz=MST).time()
 
-    if not time(13, 45) <= timestamp < time(13, 58):
+    if not time(13, 45) <= timestamp < time(18, 58):
         print(datetime.now().time())
         send_discord_alert(f"❌ BIBO Timed Out - {timestamp}")
         logger.info(f"time_check: invalid - {timestamp}")
@@ -146,12 +169,16 @@ def run_strategy():
     if not time_check():
         return
 
-    if not check_spy():
+    check_spy, spy_return = spy_data()
+
+    if not check_spy:
         return
+
+    spy = generate_symbols()
 
     clear_bto_orders()
 
-    for symbol in SPY_VOL:
+    for symbol in spy:
         timestamp = datetime.now(tz=MST).strftime("%Y-%m-%d %H:%M")
 
         if symbol in positions:
@@ -170,7 +197,7 @@ def run_strategy():
         if df is None or len(df) < 2:
             continue
 
-        signal, today = check_signal(df)
+        signal, today = check_signal(df, spy_return)
         if not signal:
             continue
 

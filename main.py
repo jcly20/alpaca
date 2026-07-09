@@ -1,12 +1,4 @@
-
-
-import sys
-
-import account.authentication_paper as auth
-from account.authentication_paper import client, historicalClient
-import portfolio.watchlists as watchlists
-import portfolio.portfolio as portfolio
-import algorithm.algorithm1.algorithm1 as alg1
+import deprecated.algorithm1.algorithm1 as alg1
 
 #get all watchlists
 # allWatchlists = watchlists.getAllWatchlists()

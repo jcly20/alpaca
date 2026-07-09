@@ -4,7 +4,7 @@
 import sys
 import os
 
-from config import SPY_HARD, SPY_VOL_HARD, RISK_PER_TRADE, ATR_STOP_MULT, ATR_TP_MULT, MST
+from config import SPY_HARD, SPY_VOL_HARD, BASE_DIR, RISK_PER_TRADE, ATR_STOP_MULT, ATR_TP_MULT, MST
 from trading import submit_order, load_open_positions, load_bto_orders
 from notification import send_discord_alert
 from logger import logger
@@ -62,7 +62,7 @@ def fetch_data(symbol):
 
 
 def generate_symbols():
-    spy_holdings = pd.read_excel("spy_holdings.xlsx", skiprows=4)
+    spy_holdings = pd.read_excel( os.path.join(BASE_DIR, "spy_holdings.xlsx"), skiprows=4)
     spy_symbols = spy_holdings["Ticker"].dropna().tolist()
     volume_rank = {}
 

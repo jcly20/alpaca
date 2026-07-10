@@ -74,7 +74,6 @@ def generate_symbols():
         volume_rank[symbol] = avg_dollar_volume
 
     spy = sorted(volume_rank, key=volume_rank.get, reverse=True)
-    print(spy)
     return spy
 
 
@@ -136,7 +135,7 @@ def time_check():
 
     timestamp = datetime.now(tz=MST).time()
 
-    if not time(13, 45) <= timestamp < time(18, 58):
+    if not time(13, 45) <= timestamp < time(13, 58):
         print(datetime.now().time())
         send_discord_alert(f"❌ BIBO Timed Out - {timestamp}")
         logger.info(f"time_check: invalid - {timestamp}")

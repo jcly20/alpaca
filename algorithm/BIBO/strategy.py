@@ -8,7 +8,7 @@ from config import SPY_HARD, SPY_VOL_HARD, BASE_DIR, RISK_PER_TRADE, ATR_STOP_MU
 from trading import submit_order, load_open_positions, load_bto_orders
 from notification import send_discord_alert
 from logger import logger
-from account.authentication_paper import client, historicalClient
+from account.authentication_paper import client, historicalClient, finnhubClient
 
 import pandas as pd
 from datetime import datetime, timedelta, time
@@ -62,7 +62,7 @@ def fetch_data(symbol):
 
 
 def generate_symbols():
-    spy_holdings = pd.read_excel( os.path.join(BASE_DIR, "spy_holdings.xlsx"), skiprows=4)
+    spy_holdings = pd.read_excel(os.path.join(BASE_DIR, "spy_holdings.xlsx"), skiprows=4)
     spy_symbols = spy_holdings["Ticker"].dropna().tolist()
     volume_rank = {}
 
@@ -115,7 +115,7 @@ def spy_data():
     return True, spy_return
 
 
-def check_signal(df, spy_return):
+def check_signal(df, spy_return, symbol):
     today = df.iloc[-1]
     yesterday = df.iloc[-2]
 
@@ -126,7 +126,16 @@ def check_signal(df, spy_return):
     cond5 = today["stock_return"] - spy_return
 
     if cond1 and cond2 and cond3 and cond4 and cond5 > 0:
-        return True, today
+        earnings_start = datetime.date.today()
+        earnings_end = datetime.date.today() + timedelta(days=4)
+
+        earnings = finnhubClient.earnings_calendar(_from=earnings_start, to=earnings_end, symbol=symbol, international=False)
+
+        if earnings['earningsCalendar']:
+            return True, today
+        else :
+            send_discord_alert(f"❌ Signal within Earnings Window - {symbol}")
+            logger.info(f"Signal within Earnings Window {symbol}")
 
     return False, None
 
@@ -196,7 +205,7 @@ def run_strategy():
         if df is None or len(df) < 2:
             continue
 
-        signal, today = check_signal(df, spy_return)
+        signal, today = check_signal(df, spy_return, symbol)
         if not signal:
             continue
 

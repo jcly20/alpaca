@@ -11,6 +11,7 @@ from logger import logger
 from account.authentication_paper import client, historicalClient, finnhubClient
 
 import pandas as pd
+import datetime
 from datetime import datetime, timedelta, time
 import pytz
 import math

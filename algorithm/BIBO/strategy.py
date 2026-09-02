@@ -133,10 +133,10 @@ def check_signal(df, spy_return, symbol):
         earnings = finnhubClient.earnings_calendar(_from=earnings_start, to=earnings_end, symbol=symbol, international=False)
 
         if earnings['earningsCalendar']:
-            return True, today
-        else :
             send_discord_alert(f"❌ Signal within Earnings Window - {symbol}")
             logger.info(f"Signal within Earnings Window {symbol}")
+        else :
+            return True, today
 
     return False, None
 

@@ -4,6 +4,8 @@
 import sys
 import os
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
 from config import SPY_HARD, SPY_VOL_HARD, BASE_DIR, RISK_PER_TRADE, ATR_STOP_MULT, ATR_TP_MULT, MST
 from trading import submit_order, load_open_positions, load_bto_orders
 from notification import send_discord_alert
@@ -20,8 +22,6 @@ from alpaca.data.requests import StockBarsRequest, StockSnapshotRequest
 from alpaca.trading.requests import GetOrdersRequest
 from alpaca.data.timeframe import TimeFrame
 from alpaca.trading.enums import OrderSide
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 
 def fetch_data(symbol):

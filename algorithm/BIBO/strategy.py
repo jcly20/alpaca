@@ -127,8 +127,8 @@ def check_signal(df, spy_return, symbol):
     cond5 = today["stock_return"] - spy_return
 
     if cond1 and cond2 and cond3 and cond4 and cond5 > 0:
-        earnings_start = datetime.date.today()
-        earnings_end = datetime.date.today() + timedelta(days=4)
+        earnings_start = datetime.now().date()
+        earnings_end = datetime.now().date() + timedelta(days=4)
 
         earnings = finnhubClient.earnings_calendar(_from=earnings_start, to=earnings_end, symbol=symbol, international=False)
 

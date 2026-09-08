@@ -103,12 +103,12 @@ def spy_data():
 
     if spy_df is None or len(spy_df) < 1:
         send_discord_alert("❌ SPY data insufficient.")
-        return False
+        return False, None
 
     today = spy_df.iloc[-1]
     if today['close'] <= today['SMA150']:
         send_discord_alert("⚠️ No trades: SPY is below its 150SMA.")
-        return False
+        return False, None
 
     send_discord_alert("✅ Scanning: SPY is above its 150SMA.")
     logger.info("SPY trading above 150SMA")

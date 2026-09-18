@@ -5,48 +5,81 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 import pandas as pd
+import yfinance as yf
 from alpaca.data.requests import StockBarsRequest
-from alpaca.data.timeframe import TimeFrame
+from alpaca.data.timeframe import TimeFrame, TimeFrameUnit
 from datetime import datetime, timedelta
 from account.authentication_paper import historicalClient
 
-# Define the time range: last 2 years
-end_date = datetime.now()
-start_date = end_date - timedelta(days=730)
 
-# Create request for VIX data using the ^VIX symbol
-symbol = "VIX"
-request_params = StockBarsRequest(
-    symbol_or_symbols=symbol,
-    timeframe=TimeFrame.Day,
-    start=start_date,
-    end=end_date,
-)
+def get_vix(start_date, end_date) :
+    vix = yf.download(
+        tickers="^VIX",
+        start=start_date,
+        end=end_date,
+        interval="5m",
+        auto_adjust=False,
+        multi_level_index=False
+    )
 
-# Fetch the data
-bars = historicalClient.get_stock_bars(request_params)
+    vix = vix.drop(columns=['Volume', 'Adj Close'])
+    vix = vix.reset_index()
+    vix.columns = ["date", "close", "high", "low", "open"]
+    vix = vix[["date", "open", "high", "low", "close"]]
 
-# Convert to DataFrame - bars is a dict-like object keyed by symbol
-bars_data = bars[symbol]
-vix_df = pd.DataFrame([{
-    "timestamp": pd.to_datetime(bar.timestamp).normalize(),
-    "open": bar.open,
-    "high": bar.high,
-    "low": bar.low,
-    "close": bar.close,
-    "volume": bar.volume
-} for bar in bars_data]).set_index("timestamp")
-
-print(f"VIX data fetched: {len(vix_df)} rows")
-print(f"Date range: {vix_df.index.min()} to {vix_df.index.max()}")
-print("\nFirst few rows:")
-print(vix_df.head())
-print("\nDataFrame info:")
-print(vix_df.info())
+    return vix
 
 
+def get_spy(start_date, end_date) :
+    symbol = "SPY"
+
+    req = StockBarsRequest(symbol_or_symbols=symbol, timeframe=TimeFrame(5, TimeFrameUnit.Minute), start=start_date, end=end_date)
+    bars = historicalClient.get_stock_bars(req)[symbol]
+    data = [{
+            "timestamp": bar.timestamp,
+            "symbol": symbol,
+            "open": bar.open,
+            "high": bar.high,
+            "low": bar.low,
+            "close": bar.close,
+            "volume": bar.volume
+        } for bar in bars]
+
+    df = pd.DataFrame(data)
+    df = df[["timestamp", "open", "high", "low", "close", "volume"]]
+    df = df.rename(columns={"timestamp": "date"})
+
+    return df
 
 
+def merge_df(vix, spy) :
+    spy["date"] = pd.to_datetime(spy["date"], utc=True).dt.tz_convert("America/New_York")
+    vix["date"] = pd.to_datetime(vix["date"], utc=True).dt.tz_convert("America/New_York")
+
+    df = pd.merge(
+        spy,
+        vix,
+        on="date",
+        suffixes=("_spy", "_vix")
+    )
+
+    df = df.sort_values("date").reset_index(drop=True)
+
+    return df
+
+
+start = datetime(2026, 7, 20)
+end = datetime(2026, 9, 11)
+
+#vix = get_vix(start, end)
+spy = get_spy(start, end)
+
+#print(vix)
+print(spy)
+
+#data = merge_df(vix, spy)
+
+#print(data)
 
 
 
